@@ -1,0 +1,32 @@
+# Use a slim Python base image that includes a full OS (Debian)
+FROM python:3.10-slim-bullseye
+
+# Set environment variables to prevent interactive prompts during installs
+ENV DEBIAN_FRONTEND=noninteractive
+
+# 1. Install Chromium (for Selenium) and its driver
+RUN apt-get update && \
+    apt-get install -y \
+    chromium \
+    chromium-driver \
+    --no-install-recommends && \
+    apt-get clean && \
+    rm -rf /var/lib/apt/lists/*
+
+# 2. Set up the application directory
+WORKDIR /app
+
+# 3. Install Python dependencies
+# Copy only requirements first to leverage Docker layer caching
+COPY requirements.txt .
+RUN pip install --no-cache-dir -r requirements.txt
+
+# 4. Copy the rest of your application code
+COPY . .
+
+# 5. Create the shared data directory
+# This directory will be 'mounted' over by our volume
+RUN mkdir -p /app/data
+
+# Note: We don't need a CMD or ENTRYPOINT here
+# because docker-compose will provide the commands.
