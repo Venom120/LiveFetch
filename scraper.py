@@ -133,22 +133,30 @@ def get_live_match_data(driver):
     wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
     driver.refresh()
     try:
+        # Check for match result/end
         result_element = wait.until(EC.presence_of_element_located((By.CSS_SELECTOR, "div.match-result-text")))
         if result_element and result_element.text.strip():
             print(f"Match result found ('{result_element.text}'). Stopping scrape.")
             return None
-    except NoSuchElementException:
-        pass
+    except (TimeoutException, NoSuchElementException):
+        # This is good, it means no result is posted and the match is live
+        pass 
 
     bookmaker_data = []
     try:
-        bookmaker_xpath = "//*[@id='root']/body/div[6]/div[2]/div/div[4]/div[2]"
-        bookmaker_container = wait.until(EC.presence_of_element_located((By.XPATH, bookmaker_xpath)))
-        team_rows = bookmaker_container.find_elements(By.XPATH, ".//table/tbody/tr[position() > 1 and count(td) > 1]")
+        # --- FIX: Using the correct XPath for "match odds" provided by user ---
+        bookmaker_xpath = "//*[@id='root']/body/div[6]/div[2]/div/div[4]/div[1]/div[2]/table/tbody"
+        
+        # Wait for the tbody element directly
+        bookmaker_tbody = wait.until(EC.presence_of_element_located((By.XPATH, bookmaker_xpath)))
+        
+        # Find rows inside the tbody. Skip first row (header)
+        team_rows = bookmaker_tbody.find_elements(By.XPATH, ".//tr[position() > 1 and count(td) > 1]")
         
         for row in team_rows:
             team_name = row.find_element(By.CSS_SELECTOR, "span.in-play-title").text
             back_prices = []
+            # Find all 3 back buttons
             for el in row.find_elements(By.CSS_SELECTOR, "a.btn-back"):
                 try:
                     price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
@@ -158,6 +166,7 @@ def get_live_match_data(driver):
                 except NoSuchElementException: pass
 
             lay_prices = []
+             # Find all 3 lay buttons
             for el in row.find_elements(By.CSS_SELECTOR, "a.btn-lay"):
                 try:
                     price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
@@ -166,44 +175,54 @@ def get_live_match_data(driver):
                         lay_prices.append({"price": price, "size": size})
                 except NoSuchElementException: pass
             
-            bookmaker_data.append({
-                "team_name": team_name,
-                "back": back_prices,
-                "lay": lay_prices
-            })
+            if team_name: # Only append if we found a team
+                bookmaker_data.append({
+                    "team_name": team_name,
+                    "back": back_prices,
+                    "lay": lay_prices
+                })
     except (TimeoutException, NoSuchElementException, StaleElementReferenceException) as e:
         print(f"Could not scrape Bookmaker data: {e}")
 
     fancy_data = []
     session_data = []
     try:
+        # --- NO CHANGE: This XPath was already correct ---
         fancy_xpath = "//*[@id='root']/body/div[6]/div[2]/div/div[5]/div/div[4]/table/tbody"
         fancy_container = wait.until(EC.presence_of_element_located((By.XPATH, fancy_xpath)))
+        
+        # Skip header row and mobile-only rows
         market_rows = fancy_container.find_elements(By.XPATH, ".//tr[not(contains(@class, 'bet-all-new')) and not(contains(@class, 'brblumobile'))]")
         
         for row in market_rows:
-            market_name = row.find_element(By.CSS_SELECTOR, "span.marketnamemobile").text.strip()
-            
-            lay_btn = row.find_element(By.CSS_SELECTOR, "a.btn-lay")
-            no_val = lay_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
-            no_size = lay_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
+            try:
+                market_name = row.find_element(By.CSS_SELECTOR, "span.marketnamemobile").text.strip()
+                
+                lay_btn = row.find_element(By.CSS_SELECTOR, "a.btn-lay")
+                no_val = lay_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
+                no_size = lay_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
 
-            back_btn = row.find_element(By.CSS_SELECTOR, "a.btn-back")
-            yes_val = back_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
-            yes_size = back_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
-            
-            market_item = {
-                "name": market_name, 
-                "no_val": no_val, 
-                "no_size": no_size, 
-                "yes_val": yes_val, 
-                "yes_size": yes_size
-            }
+                back_btn = row.find_element(By.CSS_SELECTOR, "a.btn-back")
+                yes_val = back_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
+                yes_size = back_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
+                
+                # Only add if we have data
+                if market_name and no_val and yes_val:
+                    market_item = {
+                        "name": market_name, 
+                        "no_val": no_val, 
+                        "no_size": no_size, 
+                        "yes_val": yes_val, 
+                        "yes_size": yes_size
+                    }
 
-            if "over" in market_name.lower() or "run" in market_name.lower():
-                session_data.append(market_item)
-            else:
-                fancy_data.append(market_item)
+                    if "over" in market_name.lower() or "run" in market_name.lower() or "session" in market_name.lower():
+                        session_data.append(market_item)
+                    else:
+                        fancy_data.append(market_item)
+            except (NoSuchElementException, StaleElementReferenceException):
+                # This can happen if a single fancy market row is suspended or disappears
+                pass # Just skip this row and continue with the next one
     except (TimeoutException, NoSuchElementException, StaleElementReferenceException) as e:
         print(f"Could not scrape Fancy/Session data: {e}")
 
@@ -321,101 +340,105 @@ def main_manager():
         while True:
             if not driver:
                 print("Failed to start manager driver. Retrying setup...")
-                return
+                time.sleep(10) # Wait before retrying setup
+                driver = setup_driver()
+                continue # Skip to the next loop iteration
 
             print("="*30)
             print(f"Starting new manager cycle at {time.strftime('%Y-%m-%d %H:%M:%S')}")
             
-            # This set will be populated in Pass 1
             found_match_ids = set() 
-            # This list will hold data for Pass 2
             matches_to_start = [] 
 
             try:
                 driver.get(f"{TARGET_URL}/game/4")
-                # login_demo_account(driver)
+                # login_demo_account(driver) # Still commented out as in your original
                 wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
                 match_table_xpath = "//*[@id='root']/body/div[6]/div[2]/div[2]/div[2]/table/tbody"
-                
+                live_rows_xpath = ".//tr[.//div[contains(@class, 'livenownew')]]"
+
+                # --- PASS 1: Click each match to get its ID ---
+                num_matches = 0
                 try:
-                    tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
-                    # Find rows that are live
-                    live_rows = tbody.find_elements(By.XPATH, ".//tr[.//div[contains(@class, 'livenownew')]]")
+                    wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
+                    live_row_elements = driver.find_elements(By.XPATH, live_rows_xpath)
+                    num_matches = len(live_row_elements)
                     
-                    if not live_rows:
+                    if num_matches == 0:
                         print("No live matches found.")
+                        driver.refresh()
+                        continue # Skip to cleanup/next cycle
                     else:
-                        print(f"Found {len(live_rows)} live matches. Checking for new ones...")
-
-                    current_live_matches = wait.until(EC.presence_of_element_located((By.XPATH, '//*[@id="root"]/body/div[4]/a[5]'))).get_attribute('innerText')
-
-                    if current_live_matches:
-                        count_matches = int(current_live_matches.strip().split('\n')[0])
-                        if count_matches != len(live_rows):
-                            print(f"Discrepancy in live match count: Expected {current_live_matches}, Found {len(live_rows)}")
-                            continue
-                    else: continue
-
-                    for row in live_rows:
-                        try:
-                            # Get team names
-                            teams_text_raw = row.find_element(By.CSS_SELECTOR, ".event-title").text
-                            teams = teams_text_raw.split("|", 1)[-1].strip() if "|" in teams_text_raw else teams_text_raw.strip()
-
-                            # Get match_id from the link's href *without* clicking
-                            # We find the 'a' tag in the row that contains the event link
-                            link_element = row.find_element(By.XPATH, ".//a[contains(@href, '/event/4/')]")
-                            href = link_element.get_attribute('href')
-                            
-                            if not href:
-                                print(f"Could not find href for row: {teams}. Skipping.")
-                                continue
-                                
-                            match_id = href.split('/')[-1].split('?')[0]
-                            
-                            if not match_id:
-                                print(f"Could not parse match_id from href: {href}. Skipping.")
-                                continue
-
-                            # Add to our temporary list and the set for cleanup
-                            matches_to_start.append({"id": match_id, "teams": teams})
-                            found_match_ids.add(match_id) 
-
-                        except (StaleElementReferenceException, NoSuchElementException) as e:
-                            # This can happen if the list page itself refreshes mid-extraction
-                            print(f"Page state changed during extraction: {e}. Retrying manager cycle.")
-                            matches_to_start.clear() # Discard partial data
-                            found_match_ids.clear()
-                            break # Break from 'for row in live_rows' to retry the whole cycle
-                    
-                    # --- PASS 2: Start threads based on extracted data ---
-                    if not matches_to_start and live_rows:
-                        # This means the extraction loop was broken
-                        print("Extraction was interrupted, will retry.")
-                    else:
-                        print(f"Extracted {len(matches_to_start)} matches. Checking for new threads to start...")
-
-                    for match_info in matches_to_start:
-                        match_id = match_info['id']
-                        teams = match_info['teams']
-
-                        with data_lock:
-                            is_active = match_id in active_match_threads
+                        print(f"Found {num_matches} live matches. Iterating to get IDs...")
                         
-                        if not is_active:
-                            print(f"Found new match: {teams} (ID: {match_id}). Starting thread.")
-                            
-                            t = threading.Thread(
-                                target=scrape_match_worker, 
-                                args=(match_id, teams)
-                            )
-                            t.start()
-                            with data_lock:
-                                active_match_threads[match_id] = t
-                        # If 'is_active' is true, we just skip it, as a thread is already running
+                except TimeoutException:
+                    print("Match table not found on page load.")
+                    continue # Skip to cleanup/next cycle
+                
+                for i in range(num_matches):
+                    teams=[]
+                    try:
+                        # 1. Re-find all rows to ensure they are fresh after driver.back()
+                        wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
+                        all_rows = driver.find_elements(By.XPATH, live_rows_xpath)
+                        
+                        if i >= len(all_rows):
+                            print("Match list changed during iteration, stopping ID collection.")
+                            break
+                        
+                        # 2. Get info from the i-th row
+                        row_to_process = all_rows[i]
+                        clickable_cell = row_to_process.find_element(By.CSS_SELECTOR, ".event-title")
+                        
+                        teams_text_raw = clickable_cell.text
+                        teams = teams_text_raw.split("|", 1)[-1].strip() if "|" in teams_text_raw else teams_text_raw.strip()
 
-                except (TimeoutException, NoSuchElementException):
-                    print("Could not find match table to list live matches.")
+                        # 3. Click the cell to navigate
+                        clickable_cell.click()
+                        
+                        # 4. Wait for new URL and extract ID
+                        wait.until(EC.url_contains("/event/"))
+                        match_id = driver.current_url.split('/')[-1].split('?')[0]
+                        
+                        if not match_id:
+                            print(f"Could not parse match_id for {teams}. Skipping.")
+                        else:
+                            print(f"Found ID: {match_id} for {teams}")
+                            matches_to_start.append({"id": match_id, "teams": teams})
+                            found_match_ids.add(match_id)
+                        
+                        # 5. Go back and wait for table to reload
+                        driver.back()
+                        wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
+
+                    except (StaleElementReferenceException, TimeoutException, NoSuchElementException) as e:
+                        print(f"Error processing match at index {i} ('{teams}'): {e}.")
+                        print("Stopping ID collection and retrying manager cycle.")
+                        driver.get(f"{TARGET_URL}/game/4") # Reset driver state
+                        matches_to_start.clear() # Discard partial data
+                        found_match_ids.clear()
+                        break # Break from the 'for' loop to start a fresh cycle
+                
+                # --- PASS 2: Start threads based on extracted data ---
+                if matches_to_start:
+                    print(f"Extracted {len(matches_to_start)} IDs. Starting new threads...")
+                
+                for match_info in matches_to_start:
+                    match_id = match_info['id']
+                    teams = match_info['teams']
+
+                    with data_lock:
+                        is_active = match_id in active_match_threads
+                    
+                    if not is_active:
+                        print(f"Starting thread for: {teams} (ID: {match_id}).")
+                        t = threading.Thread(
+                            target=scrape_match_worker, 
+                            args=(match_id, teams)
+                        )
+                        t.start()
+                        with data_lock:
+                            active_match_threads[match_id] = t
             
             except WebDriverException as e:
                 print(f"Manager driver error: {e}. Restarting driver.")
@@ -425,22 +448,18 @@ def main_manager():
                     print("Failed to restart manager driver. Waiting 60s.")
                     time.sleep(60)
             except Exception as e:
-                print(f"Error in main manager cycle: {e}")
+                print(f"Unhandled error in main manager cycle: {e}")
 
-            # --- Cleanup Logic  ---
-            
-            # Find threads for matches that are no longer in the live list
+            # --- Cleanup Logic (Unchanged) ---
             with data_lock:
                 active_ids = set(active_match_threads.keys())
             
-            # 'found_match_ids' was populated in Pass 1
+            # Find threads for matches that are no longer in the live list
             ids_to_stop = active_ids - found_match_ids
             if ids_to_stop:
-                print(f"Matches no longer in list, stopping threads for: {ids_to_stop}")
-                # Note: This doesn't actively stop threads, it relies on them
-                # finishing. You'd need a more complex signal mechanism to force-stop.
-                # For now, we'll just log it. The worker threads *should* stop
-                # on their own when the match ends (returning 'None').
+                print(f"Matches no longer in live list: {ids_to_stop}")
+                # Note: This doesn't actively stop threads.
+                # The worker threads should stop on their own when the match ends.
 
             # Find and clean up threads that have died
             dead_threads = []
