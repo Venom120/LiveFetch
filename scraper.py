@@ -320,16 +320,20 @@ def main_manager():
     try:
         while True:
             if not driver:
-                print("Failed to start manager driver. Exiting.")
+                print("Failed to start manager driver. Retrying setup...")
                 return
+
             print("="*30)
             print(f"Starting new manager cycle at {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            found_match_ids = set()
+            
+            # This set will be populated in Pass 1
+            found_match_ids = set() 
+            # This list will hold data for Pass 2
+            matches_to_start = [] 
+
             try:
                 driver.get(f"{TARGET_URL}/game/4")
-
                 # login_demo_account(driver)
-
                 wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
                 match_table_xpath = "//*[@id='root']/body/div[6]/div[2]/div[2]/div[2]/table/tbody"
                 
@@ -354,61 +358,91 @@ def main_manager():
 
                     for row in live_rows:
                         try:
+                            # Get team names
                             teams_text_raw = row.find_element(By.CSS_SELECTOR, ".event-title").text
                             teams = teams_text_raw.split("|", 1)[-1].strip() if "|" in teams_text_raw else teams_text_raw.strip()
 
-                            clickable_cell = row.find_element(By.CSS_SELECTOR, ".event-title")
-                            clickable_cell.click()
+                            # Get match_id from the link's href *without* clicking
+                            # We find the 'a' tag in the row that contains the event link
+                            link_element = row.find_element(By.XPATH, ".//a[contains(@href, '/event/4/')]")
+                            href = link_element.get_attribute('href')
                             
-                            wait.until(EC.url_contains("/event/"))
-                            match_id = driver.current_url.split('/')[-1].split('?')[0]
+                            if not href:
+                                print(f"Could not find href for row: {teams}. Skipping.")
+                                continue
+                                
+                            match_id = href.split('/')[-1].split('?')[0]
                             
                             if not match_id:
+                                print(f"Could not parse match_id from href: {href}. Skipping.")
                                 continue
 
-                            found_match_ids.add(match_id)
+                            # Add to our temporary list and the set for cleanup
+                            matches_to_start.append({"id": match_id, "teams": teams})
+                            found_match_ids.add(match_id) 
 
-                            with data_lock:
-                                is_active = match_id in active_match_threads
-                            
-                            if not is_active:
-                                print(f"Found new match: {teams} (ID: {match_id}). Starting thread.")
-                                
-                                t = threading.Thread(
-                                    target=scrape_match_worker, 
-                                    args=(match_id, teams)
-                                )
-                                t.start()
-                                with data_lock:
-                                    active_match_threads[match_id] = t
-                        
                         except (StaleElementReferenceException, NoSuchElementException) as e:
-                            print(f"Error processing a match row: {e}. Skipping row.")
+                            # This can happen if the list page itself refreshes mid-extraction
+                            print(f"Page state changed during extraction: {e}. Retrying manager cycle.")
+                            matches_to_start.clear() # Discard partial data
+                            found_match_ids.clear()
+                            break # Break from 'for row in live_rows' to retry the whole cycle
+                    
+                    # --- PASS 2: Start threads based on extracted data ---
+                    if not matches_to_start and live_rows:
+                        # This means the extraction loop was broken
+                        print("Extraction was interrupted, will retry.")
+                    else:
+                        print(f"Extracted {len(matches_to_start)} matches. Checking for new threads to start...")
+
+                    for match_info in matches_to_start:
+                        match_id = match_info['id']
+                        teams = match_info['teams']
+
+                        with data_lock:
+                            is_active = match_id in active_match_threads
+                        
+                        if not is_active:
+                            print(f"Found new match: {teams} (ID: {match_id}). Starting thread.")
+                            
+                            t = threading.Thread(
+                                target=scrape_match_worker, 
+                                args=(match_id, teams)
+                            )
+                            t.start()
+                            with data_lock:
+                                active_match_threads[match_id] = t
+                        # If 'is_active' is true, we just skip it, as a thread is already running
 
                 except (TimeoutException, NoSuchElementException):
-                    print("Could not find match table to count live matches.")
-                    # Invalidate login state to force re-login next cycle
+                    print("Could not find match table to list live matches.")
             
             except WebDriverException as e:
                 print(f"Manager driver error: {e}. Restarting driver.")
                 if driver: driver.quit()
-                driver = setup_driver()
+                driver = setup_driver() # It will be re-checked at the start of the 'while True' loop
                 if not driver:
                     print("Failed to restart manager driver. Waiting 60s.")
                     time.sleep(60)
-                    driver = None # Ensure it retries setup
             except Exception as e:
                 print(f"Error in main manager cycle: {e}")
 
-            # Clean up dead threads
+            # --- Cleanup Logic  ---
+            
+            # Find threads for matches that are no longer in the live list
             with data_lock:
                 active_ids = set(active_match_threads.keys())
             
-            # Find threads that are no longer live
+            # 'found_match_ids' was populated in Pass 1
             ids_to_stop = active_ids - found_match_ids
             if ids_to_stop:
                 print(f"Matches no longer in list, stopping threads for: {ids_to_stop}")
+                # Note: This doesn't actively stop threads, it relies on them
+                # finishing. You'd need a more complex signal mechanism to force-stop.
+                # For now, we'll just log it. The worker threads *should* stop
+                # on their own when the match ends (returning 'None').
 
+            # Find and clean up threads that have died
             dead_threads = []
             with data_lock:
                 for match_id, t in active_match_threads.items():
@@ -418,7 +452,8 @@ def main_manager():
             for match_id in dead_threads:
                 print(f"Cleaning up dead/finished thread for match ID: {match_id}")
                 with data_lock:
-                    del active_match_threads[match_id]
+                    if match_id in active_match_threads:
+                        del active_match_threads[match_id]
                     if match_id in live_data_cache:
                          del live_data_cache[match_id]
 
@@ -436,7 +471,6 @@ def main_manager():
             driver.quit()
         print("Exiting.")
         sys.exit(0)
-
 
 if __name__ == "__main__":
     main_manager()
