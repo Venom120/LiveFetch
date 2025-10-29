@@ -1,34 +1,48 @@
 # /home/ubuntu/LiveFetch/scraper.py
-DEPLOYED = False  # Set to True when deploying to production
-
 import json
 import time
 import os
 import tempfile
+import threading
+import sys
 from selenium import webdriver
 from selenium.webdriver.common.by import By
-from selenium.webdriver.chrome.options import Options as chromeOptions
-from selenium.webdriver.edge.options import Options as EdgeOptions
+from selenium.webdriver.chrome.options import Options as ChromeOptions
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
-from selenium.common.exceptions import TimeoutException, NoSuchElementException, StaleElementReferenceException
+from selenium.common.exceptions import (
+    TimeoutException,
+    NoSuchElementException,
+    StaleElementReferenceException,
+    WebDriverException,
+)
 
 # --- Configuration ---
-TARGET_URL = "https://www.radheexch.xyz/game/4"
-JSON_OUTPUT_FILE = "/app/data/live_data.json" if DEPLOYED else "./data/live_data.json" # Must match JSON_OUTPUT_FILE in api_server.py
-SCRAPE_INTERVAL_SECONDS = 2
+DEPLOYED = False  # Set to True for production/Docker
+TARGET_URL = "https://www.radheexch.xyz"
+JSON_OUTPUT_FILE = "/app/data/live_data.json" if DEPLOYED else "./data/live_data.json"
+SCRAPE_INTERVAL_SECONDS = 2  # How often each match thread scrapes
+LIST_REFRESH_INTERVAL_SECONDS = 20  # How often to check for *new* matches
 WEB_DRIVER_TIMEOUT = 10
 
-# --- Selenium Driver Setup ---
+# --- Global Thread-Safe State ---
+live_data_cache = {}
+active_match_threads = {}
+data_lock = threading.Lock()
 
+# --- Selenium Driver Setup ---
 def setup_driver():
     """Initializes and returns a headless Selenium WebDriver."""
     try:
-        options = chromeOptions() if DEPLOYED else EdgeOptions()
+        options = ChromeOptions()
         # options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage")
-        options.add_argument("user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36")
+        options.add_argument("--disable-gpu")
+        # options.add_argument("--window-size=1920,1080")
+        options.add_argument(
+            "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
+        )
         
         # --- DNS Configuration ---
         local_state = {
@@ -37,16 +51,14 @@ def setup_driver():
         }
         options.add_experimental_option('localState', local_state)
 
-        driver = webdriver.Chrome(options=options) if DEPLOYED else webdriver.Edge(options=options) # type: ignore
-            
+        driver = webdriver.Chrome(options=options)
         driver.set_page_load_timeout(WEB_DRIVER_TIMEOUT)
         return driver
     except Exception as e:
         print(f"Error initializing WebDriver: {e}")
         return None
-    
-# --- JSON File Handling ---
 
+# --- JSON File Handling ---
 def write_to_json(data, filename):
     """Atomically writes data to a JSON file."""
     temp_path = None
@@ -58,39 +70,56 @@ def write_to_json(data, filename):
             temp_path = temp_f.name
         
         os.replace(temp_path, filename)
-        print(f"Successfully updated {filename}")
+        if not DEPLOYED:
+            print(f"Successfully updated {filename}") # Too noisy for production
     except (IOError, os.error, json.JSONDecodeError) as e:
         print(f"Error writing to JSON file {filename}: {e}")
         if temp_path and os.path.exists(temp_path):
             os.remove(temp_path)
 
-# --- Scraping Functions ---
-
-def get_live_match_count(driver):
-    """Finds all live matches and returns their count."""
+# --- Login Function ---
+def login_demo_account(driver):
+    """Logs into the demo account."""
     try:
-        match_table_xpath = "//*[@id='root']/body/div[6]/div[2]/div[2]/div[2]/table/tbody"
+        login_button_xpath = "//*[@id='btnLoginb2cLogin']"
         wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
-        tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
-        
-        # Find rows that are live
-        live_rows = tbody.find_elements(By.CLASS_NAME, "livenownew")
-        return len(live_rows)
-        
-    except (TimeoutException, NoSuchElementException):
-        print("Could not find match table to count live matches.")
-        return 0
-    except Exception as e:
-        print(f"Error in get_live_match_count: {e}")
-        return 0
+        login_button = wait.until(EC.element_to_be_clickable((By.XPATH, login_button_xpath)))
+        login_button.click()
 
+        demo_acc_button_xpath = "//*[@id='content1']/div[2]/button"
+        demo_acc_button = wait.until(EC.element_to_be_clickable((By.XPATH, demo_acc_button_xpath)))
+        demo_acc_button.click()
+        
+        # Wait for login to complete by checking for a known post-login element
+        WebDriverWait(driver, WEB_DRIVER_TIMEOUT).until(
+            EC.presence_of_element_located((By.XPATH, "//*[@id='btnExpoRightMenu']"))
+        )
+        print("Login successful.")
+        return True
+    except (TimeoutException, NoSuchElementException) as e:
+        print(f"Could not find or click demo login button: {e}")
+        return False
+    except Exception as e:
+        print(f"An unexpected error occurred during login: {e}")
+        return False
+
+# --- Core Scraping Functions ---
 def get_live_match_data(driver):
     """
     Scrapes Bookmaker, Fancy, and Session odds from the *current* page.
-    This function assumes the driver is already on the match detail page.
+    Returns None if the match appears to be over (result is posted).
     """
     wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
     
+    # --- Scrape Result ---
+    try:
+        result_element = driver.find_element(By.CSS_SELECTOR, "div.match-result-text")
+        if result_element and result_element.text.strip():
+            print(f"Match result found ('{result_element.text}'). Stopping scrape.")
+            return None  # Signal to stop scraping
+    except NoSuchElementException:
+        pass  # No result yet, continue
+
     # --- Scrape Bookmaker ---
     bookmaker_data = []
     try:
@@ -102,20 +131,24 @@ def get_live_match_data(driver):
             team_name = row.find_element(By.CSS_SELECTOR, "span.in-play-title").text
             
             back_prices = []
-            back_elements = row.find_elements(By.CSS_SELECTOR, "a.btn-back")
-            for el in back_elements:
-                price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
-                size = el.find_element(By.CSS_SELECTOR, "span").text.strip()
-                if price:
-                    back_prices.append({"price": price, "size": size})
+            for el in row.find_elements(By.CSS_SELECTOR, "a.btn-back"):
+                try:
+                    price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
+                    size = el.find_element(By.CSS_SELECTOR, "span").text.strip()
+                    if price:
+                        back_prices.append({"price": price, "size": size})
+                except NoSuchElementException:
+                    pass  # Handle missing size span
 
             lay_prices = []
-            lay_elements = row.find_elements(By.CSS_SELECTOR, "a.btn-lay")
-            for el in lay_elements:
-                price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
-                size = el.find_element(By.CSS_SELECTOR, "span").text.strip()
-                if price:
-                    lay_prices.append({"price": price, "size": size})
+            for el in row.find_elements(By.CSS_SELECTOR, "a.btn-lay"):
+                try:
+                    price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
+                    size = el.find_element(By.CSS_SELECTOR, "span").text.strip()
+                    if price:
+                        lay_prices.append({"price": price, "size": size})
+                except NoSuchElementException:
+                    pass  # Handle missing size span
             
             bookmaker_data.append({
                 "team_name": team_name,
@@ -123,7 +156,7 @@ def get_live_match_data(driver):
                 "lay": lay_prices
             })
 
-    except (TimeoutException, NoSuchElementException, Exception) as e:
+    except (TimeoutException, NoSuchElementException, StaleElementReferenceException) as e:
         print(f"Could not scrape Bookmaker data: {e}")
 
     # --- Scrape Fancy & Sessions ---
@@ -132,19 +165,15 @@ def get_live_match_data(driver):
     try:
         fancy_xpath = "//*[@id='root']/body/div[6]/div[2]/div/div[5]/div/div[4]/table/tbody"
         fancy_container = wait.until(EC.presence_of_element_located((By.XPATH, fancy_xpath)))
-        
-        # Select only data rows, skip headers/mobile separators
         market_rows = fancy_container.find_elements(By.XPATH, ".//tr[not(contains(@class, 'bet-all-new')) and not(contains(@class, 'brblumobile'))]")
         
         for row in market_rows:
             market_name = row.find_element(By.CSS_SELECTOR, "span.marketnamemobile").text.strip()
             
-            # Find No/Lay values
             lay_btn = row.find_element(By.CSS_SELECTOR, "a.btn-lay")
             no_val = lay_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
             no_size = lay_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
 
-            # Find Yes/Back values
             back_btn = row.find_element(By.CSS_SELECTOR, "a.btn-back")
             yes_val = back_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
             yes_size = back_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
@@ -162,167 +191,219 @@ def get_live_match_data(driver):
             else:
                 fancy_data.append(market_item)
                 
-    except (TimeoutException, NoSuchElementException, Exception) as e:
+    except (TimeoutException, NoSuchElementException, StaleElementReferenceException) as e:
         print(f"Could not scrape Fancy/Session data: {e}")
 
-    # --- Scrape Result ---
-    result = "In Progress" # Default
-    try:
-        # --- PLACEHOLDER SELECTOR ---
-        result_element = driver.find_element(By.CSS_SELECTOR, "div.match-result-text")
-        result = result_element.text
-    except NoSuchElementException:
-        pass # No result yet, keep default
-    
     return {
         "bookmaker": bookmaker_data,
         "fancy": fancy_data,
         "sessions": session_data,
-        "result": result,
         "last_updated": time.time()
     }
 
-# --- Login Function ---
-def login_demo_account(driver):
-    """Logs into the demo account."""
+def get_live_match_list(driver):
+    """
+    Scans the main page for all live matches and returns a dict of
+    {match_id: teams_text}. Does not navigate away from the page.
+    """
+    matches = {}
     try:
-        login_button_xpath = "//*[@id='btnLoginb2cLogin']"
+        match_table_xpath = "//*[@id='root']/body/div[6]/div[2]/div[2]/div[2]/table/tbody"
         wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
-        login_button = wait.until(EC.element_to_be_clickable((By.XPATH, login_button_xpath)))
-        login_button.click()
+        tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
 
-        demo_acc_button_xpath = "//*[@id='content1']/div[2]/button"
-        demo_acc_button = wait.until(EC.element_to_be_clickable((By.XPATH, demo_acc_button_xpath)))
-        demo_acc_button.click()
+        live_rows = tbody.find_elements(By.CLASS_NAME, "livenownew")
 
-        print("Clicked demo login button.")
+        for row in live_rows:
+            try:
+                teams_text_raw = row.find_element(By.CSS_SELECTOR, ".event-title").text
+                teams = teams_text_raw.split("|", 1)[-1].strip() if "|" in teams_text_raw else teams_text_raw.strip()
+                
+                # Find the link element and extract the match ID from its href
+                link_element = row.find_element(By.CSS_SELECTOR, "td.eventInfo a[href*='/event/']")
+                href = link_element.get_attribute('href')
+                if href:
+                    match_id = href.split('/')[-1].split('?')[0]
+                else:
+                    match_id = None
+                
+                if match_id and teams:
+                    matches[match_id] = teams
+            except (NoSuchElementException, StaleElementReferenceException) as e:
+                print(f"Error parsing a match row: {e}")
+                
     except (TimeoutException, NoSuchElementException) as e:
-        print(f"Could not find or click demo login button: {e}")
+        print(f"Could not find or parse match table: {e}")
+    except Exception as e:
+        print(f"Error in get_live_match_list: {e}")
+        
+    return matches
 
-
-# --- Main Application Loop ---
-
-def main_loop():
-    """Main scraping loop."""
+# --- Threading Functions ---
+def scrape_match_worker(match_id, teams):
+    """
+    A dedicated thread function to scrape a single match continuously.
+    """
+    print(f"[Thread-{match_id}] Starting for: {teams}")
     driver = setup_driver()
     if not driver:
-        print("Failed to start driver. Exiting.")
+        print(f"[Thread-{match_id}] Failed to start driver. Exiting.")
         return
 
-    try:
-        while True:
-            print("="*30)
-            print(f"Starting new scrape cycle at {time.strftime('%Y-%m-%d %H:%M:%S')}")
-            
-            all_live_match_data = []
-            
-            try:
-                driver.get(TARGET_URL)
+    match_url = f"{TARGET_URL}/event/{match_id}"
+    consecutive_errors = 0
 
-                banner_close_xpath = "//*[@id='content']/div/button"
+    try:
+        driver.get(match_url)
+        
+        while True:
+            try:
+                live_data = get_live_match_data(driver)
+                
+                if live_data is None:
+                    print(f"[Thread-{match_id}] Match finished or result posted. Stopping.")
+                    break
+                
+                live_data["match_id"] = match_id
+                live_data["teams"] = teams
+                
+                with data_lock:
+                    live_data_cache[match_id] = live_data
+                
+                consecutive_errors = 0  # Reset error count on success
+                
+            except (TimeoutException, NoSuchElementException, StaleElementReferenceException) as e:
+                print(f"[Thread-{match_id}] Error scraping details: {e}. Retrying...")
+                consecutive_errors += 1
+                driver.refresh() # Try refreshing the page
+            except WebDriverException as e:
+                if "invalid session id" in str(e).lower():
+                    print(f"[Thread-{match_id}] Invalid Session ID. Driver crashed. Exiting thread.")
+                    break # Exit loop, driver is dead
+                else:
+                    print(f"[Thread-{match_id}] WebDriverException: {e}. Exiting thread.")
+                    break
+            except Exception as e:
+                print(f"[Thread-{match_id}] Unhandled error: {e}. Exiting thread.")
+                break # Exit loop for safety
+
+            if consecutive_errors > 5:
+                print(f"[Thread-{match_id}] Too many consecutive errors. Exiting thread.")
+                break
+                
+            time.sleep(SCRAPE_INTERVAL_SECONDS)
+            
+    except Exception as e:
+        print(f"[Thread-{match_id}] Critical error in worker: {e}")
+    finally:
+        if driver:
+            driver.quit()
+        
+        # Clean up global state
+        with data_lock:
+            if match_id in live_data_cache:
+                del live_data_cache[match_id]
+            if match_id in active_match_threads:
+                del active_match_threads[match_id]
+                
+        print(f"[Thread-{match_id}] Cleaned up and stopped.")
+
+def write_data_loop():
+    """
+    A simple thread that periodically writes the contents of
+    live_data_cache to the JSON file.
+    """
+    while True:
+        try:
+            with data_lock:
+                # Create a snapshot of the data to write
+                all_live_data = list(live_data_cache.values())
+            
+            write_to_json(all_live_data, JSON_OUTPUT_FILE)
+            
+        except Exception as e:
+            print(f"[DataWriter] Error writing JSON: {e}")
+            
+        time.sleep(SCRAPE_INTERVAL_SECONDS)
+
+# --- Main Application Manager ---
+def main_manager():
+    """
+    Main loop to manage scraping threads.
+    It finds new matches, starts worker threads for them,
+    and cleans up dead threads.
+    """
+    print("Starting data writer thread...")
+    writer_thread = threading.Thread(target=write_data_loop, daemon=True)
+    writer_thread.start()
+
+    driver = None
+    while True:
+        try:
+            if not driver:
+                print("Setting up main manager driver...")
+                driver = setup_driver()
+                if not driver:
+                    print("Failed to start manager driver. Retrying in 60s...")
+                    time.sleep(60)
+                    continue
+                
+                driver.get(f"{TARGET_URL}/game/4")
+                
+                # Close banner popup if it appears
                 try:
+                    banner_close_xpath = "//*[@id='content']/div/button"
                     banner_close_btn = WebDriverWait(driver, 5).until(
                         EC.element_to_be_clickable((By.XPATH, banner_close_xpath))
                     )
                     banner_close_btn.click()
                     print("Closed banner popup.")
                 except (TimeoutException, NoSuchElementException):
-                    pass # No banner appeared
+                    pass # No banner
 
-                # trying to log in into demo account
-                login_demo_account(driver)
+                if not login_demo_account(driver):
+                    print("Login failed. Retrying...")
+                    driver.quit()
+                    driver = None
+                    time.sleep(10)
+                    continue
 
-                login_success = WebDriverWait(driver, WEB_DRIVER_TIMEOUT).until(
-                    EC.presence_of_element_located((By.XPATH, "//*[@id='btnExpoRightMenu']"))
-                )
-
-                if login_success:
-                    print("Login successful.")
-                    live_match_count = get_live_match_count(driver)
-                    
-                    if live_match_count == 0:
-                        print("No live matches found. Retrying...")
-                        write_to_json([], JSON_OUTPUT_FILE) # Write empty list
-                        time.sleep(SCRAPE_INTERVAL_SECONDS)
-                        continue
-
-                    print(f"Found {live_match_count} live matches. Processing...")
-
-                    # Loop from 0 to count-1
-                    for i in range(live_match_count):
-                        print(f"Processing match {i + 1} of {live_match_count}...")
-                        
-                        # Re-find the match table to avoid StaleElementReferenceException
-                        match_table_xpath = "//*[@id='root']/body/div[6]/div[2]/div[2]/div[2]/table/tbody"
-                        wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
-                        
-                        try:
-                            tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
-                            # Find all 'tr' elements that contain a 'livenownew' class
-                            live_rows = tbody.find_elements(By.XPATH, ".//tr[.//div[contains(@class, 'livenownew')]]")
-                            
-                            if i >= len(live_rows):
-                                print("Match index out of bounds, list may have changed. Restarting cycle.")
-                                break
-                                
-                            row_to_click = live_rows[i]
-                            
-                            # Get teams text *before* clicking
-                            teams_text = row_to_click.find_element(By.CSS_SELECTOR, ".event-title").text
-                            # Clean up teams text: "28 Oct 08:00 | Western Australia v South Australia" -> "Western Australia v South Australia"
-                            if "|" in teams_text:
-                                teams = teams_text.split("|", 1)[-1].strip()
-                            else:
-                                teams = teams_text.strip()
-                            
-                            # Click the event info cell to navigate
-                            clickable_cell = row_to_click.find_element(By.CSS_SELECTOR, "td.eventInfo")
-                            clickable_cell.click()
-                            
-                            # Wait for URL to change to the event page
-                            wait.until(EC.url_contains("/event/"))
-                            
-                            # Get Match ID from URL
-                            current_url = driver.current_url
-                            match_id = current_url.split('/')[-1].split('?')[0] # Get last part of URL, remove queries
-                            
-                            print(f"Scraping data for: {teams} (ID: {match_id})")
-
-                            # Scrape the detailed data
-                            live_data = get_live_match_data(driver)
-                            live_data["match_id"] = match_id
-                            live_data["teams"] = teams
-                            all_live_match_data.append(live_data)
-
-                        except (StaleElementReferenceException, TimeoutException, NoSuchElementException) as e:
-                            print(f"Error processing match {i + 1}: {e}. Skipping.")
-                        
-                        # Go back to the main URL to process the next match
-                        print("Navigating back to match list...")
-                        driver.get(TARGET_URL)
-                else:
-                    print("Login failed or login element not found.")
+            print(f"Checking for live matches...")
+            live_matches = get_live_match_list(driver)
             
-            except Exception as e:
-                print(f"Error in main scraping cycle: {e}")
+            if not live_matches:
+                print("No live matches found. Retrying...")
+                driver.refresh() # Refresh to see if they appear
+            
+            current_match_ids = set(live_matches.keys())
+            
+            with data_lock:
+                active_match_ids = set(active_match_threads.keys())
+            
+            matches_to_start = current_match_ids - active_match_ids
+            
+            for match_id in matches_to_start:
+                teams = live_matches[match_id]
+                t = threading.Thread(target=scrape_match_worker, args=(match_id, teams))
+                t.start()
+                with data_lock:
+                    active_match_threads[match_id] = t
+            
+            print(f"Manager: {len(current_match_ids)} matches live. {len(matches_to_start)} new. {len(active_match_ids)} being tracked.")
 
-            # Write all collected data to the JSON file
-            write_to_json(all_live_match_data, JSON_OUTPUT_FILE)
-
-            # Step 4: Repeat after interval
-            print(f"Cycle complete. Waiting {SCRAPE_INTERVAL_SECONDS} seconds...")
-            print("="*30)
-            time.sleep(SCRAPE_INTERVAL_SECONDS)
-
-    except KeyboardInterrupt:
-        print("\nScraping stopped by user.")
-    except Exception as e:
-        print(f"An uncaught error occurred in main loop: {e}")
-    finally:
-        if driver:
-            print("Shutting down WebDriver.")
-            driver.quit()
-
+        except WebDriverException as e:
+            print(f"Main manager driver error: {e}. Restarting driver.")
+            if driver:
+                driver.quit()
+            driver = None
+        except Exception as e:
+            print(f"Error in main manager loop: {e}")
+        
+        time.sleep(LIST_REFRESH_INTERVAL_SECONDS)
 
 if __name__ == "__main__":
-    main_loop()
+    try:
+        main_manager()
+    except KeyboardInterrupt:
+        print("\nShutting down scraper manager...")
+        sys.exit(0)
