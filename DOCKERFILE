@@ -21,10 +21,13 @@ WORKDIR /app
 COPY requirements.txt .
 RUN pip install --no-cache-dir -r requirements.txt
 
-# 4. Copy the rest of your application code
+# 4. Copy the config file *before* the rest of the code
+COPY settings.json .
+
+# 5. Copy the rest of your application code
 COPY . .
 
-# 5. Create the shared data directory
+# 6. Create the shared data directory
 # This directory will be 'mounted' over by our volume
 RUN mkdir -p /app/data
 

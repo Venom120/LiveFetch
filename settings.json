@@ -1,0 +1,18 @@
+{
+  "DEFAULT": {
+    "DEPLOYED": false
+  },
+  "Scraper": {
+    "HEADLESS": true,
+    "TARGET_URL": "https://www.radheexch.xyz",
+    "SCRAPE_INTERVAL_SECONDS": 2,
+    "LIST_REFRESH_INTERVAL_SECONDS": 20,
+    "WEB_DRIVER_TIMEOUT": 10
+  },
+  "Paths": {
+    "DATA_DIR": "./data",
+    "DEPLOYED_DATA_DIR": "/app/data",
+    "CURR_DATA_FILE": "live_data.json",
+    "OLD_DATA_FILE": "live_data.json"
+  }
+}
