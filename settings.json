@@ -12,7 +12,6 @@
   "Paths": {
     "DATA_DIR": "./data",
     "DEPLOYED_DATA_DIR": "/app/data",
-    "CURR_DATA_FILE": "live_data.json",
-    "OLD_DATA_FILE": "live_data.json"
+    "DATA_FILE": "live_data.json"
   }
 }
