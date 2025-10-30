@@ -2,7 +2,6 @@ selenium
 requests
 flask
 gunicorn
-signal
 logging
 pytest
 pytest-mock

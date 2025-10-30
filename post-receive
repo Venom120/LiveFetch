@@ -3,7 +3,7 @@
 # Define directories
 GIT_DIR="/home/ubuntu/LiveFetch.git"
 TARGET_DIR="/home/ubuntu/LiveFetch"
-COMPOSE_DIR="/home/ubuntu/"
+COMPOSE_DIR="/opt/docker-stack/"
 
 # --- 1. Checkout latest code from the bare repo ---
 echo "Deploying latest code changes..."
