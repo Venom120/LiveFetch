@@ -19,6 +19,6 @@ echo "Building and restarting Docker containers..."
 
 # Navigate to the directory with docker-compose.yml and run it
 cd "${COMPOSE_DIR}" || exit
-docker compose up -d --build --remove-orphans scraper
+docker compose up -d --build --remove-orphans livefetch
 
 echo "Deployment complete."

@@ -1,12 +1,12 @@
 {
   "DEFAULT": {
-    "DEPLOYED": false,
-    "LEVEL": "INFO"
+    "DEPLOYED": true,
+    "LEVEL": "ERROR"
   },
   "Scraper": {
     "HEADLESS": true,
     "TARGET_URL": "https://www.radheexch.xyz",
-    "SCRAPE_INTERVAL_SECONDS": 1,
+    "SCRAPE_INTERVAL_SECONDS": 2,
     "LIST_REFRESH_INTERVAL_SECONDS": 10,
     "WEB_DRIVER_TIMEOUT": 10
   },

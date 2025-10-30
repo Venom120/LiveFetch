@@ -483,17 +483,18 @@ def main_manager():
             found_match_ids = set() 
             matches_to_start = [] 
 
-            manager_driver.get(f"{TARGET_URL}/game/4")
-
-            if main_shutdown_event.is_set():
-                break
-
             # --- Find Live Matches ---
-            wait = WebDriverWait(manager_driver, WEB_DRIVER_TIMEOUT)
             match_table_xpath = "//*[@id='root']/body/div[6]/div[2]/div[2]/div[2]/table/tbody"
             live_rows_xpath = ".//tr[.//div[contains(@class, 'livenownew')]]"
 
             try:
+                manager_driver.get(f"{TARGET_URL}/game/4")
+
+                if main_shutdown_event.is_set():
+                    break
+
+                wait = WebDriverWait(manager_driver, WEB_DRIVER_TIMEOUT)
+
                 tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
                 live_rows = tbody.find_elements(By.XPATH, live_rows_xpath)
 
@@ -581,7 +582,11 @@ def main_manager():
                 logging.warning("Could not find match table to list live matches.")
             except WebDriverException as e:
                 logging.error(f"Manager driver error: {e}. Restarting driver.")
-                if manager_driver: manager_driver.quit()
+                if manager_driver:
+                    try:
+                        manager_driver.quit()
+                    except Exception as e_quit:
+                        logging.warning(f"Error during driver quit, may be unstable: {e_quit}")
                 manager_driver = None
                 continue # Skip to next manager cycle
             except Exception as e:
@@ -632,8 +637,8 @@ def main_manager():
             if manager_driver:
                 try:
                     manager_driver.quit()
-                except Exception:
-                    pass
+                except Exception as e_quit:
+                    logging.warning(f"Error during critical driver quit: {e_quit}")
                 manager_driver = None
             main_shutdown_event.wait(timeout=30)
 
