@@ -1,9 +1,3 @@
-# /home/ubuntu/LiveFetch/scraper.py
-
-# --- !! IMPORTANT !! ---
-# DEPLOYED setting is now controlled by settings.json
-# ---
-
 import json
 import time
 import os
@@ -36,33 +30,31 @@ except json.JSONDecodeError:
     print("FATAL ERROR: settings.json is not valid JSON.", file=sys.stderr)
     sys.exit(1)
 
-
-# --- Logging Setup ---
-# Setup logging as early as possible
-logging.basicConfig(
-    level=logging.INFO,
-    format="%(asctime)s - %(threadName)s - %(levelname)s - %(message)s",
-    datefmt="%Y-%m-%d %H:%M:%S",
-)
-
 DEPLOYED = config.get('DEFAULT', {}).get('DEPLOYED', False)
 TARGET_URL = config.get('Scraper', {}).get('TARGET_URL', 'http://example.com')
 SCRAPE_INTERVAL_SECONDS = config.get('Scraper', {}).get('SCRAPE_INTERVAL_SECONDS', 1)
 LIST_REFRESH_INTERVAL_SECONDS = config.get('Scraper', {}).get('LIST_REFRESH_INTERVAL_SECONDS', 60)
 WEB_DRIVER_TIMEOUT = config.get('Scraper', {}).get('WEB_DRIVER_TIMEOUT', 10)
 HEADLESS = config.get('Scraper', {}).get('HEADLESS', True)
+LEVEL = config.get('DEFAULT', {}).get('LEVEL', 'INFO').upper()
+LEVELS = ['DEBUG', 'INFO', 'WARNING', 'ERROR', 'CRITICAL']
+if LEVEL not in LEVELS:
+    LEVEL = 'INFO'
 
-# Determine JSON output file path based on DEPLOYED flag
+# --- Logging Setup ---
+logging.basicConfig(
+    level=getattr(logging, LEVEL),
+    format="%(asctime)s - %(threadName)s - %(levelname)s - %(message)s",
+    datefmt="%Y-%m-%d %H:%M:%S",
+)
 if DEPLOYED:
     data_dir = config.get('Paths', {}).get('DEPLOYED_DATA_DIR', '.')
 else:
     data_dir = config.get('Paths', {}).get('DATA_DIR', '.')
 
-# Paths for current (live) and old (finished) data
 DATA_FILE = os.path.join(data_dir, config.get('Paths', {}).get('DATA_FILE', 'live_data.json'))
 
 
-# --- Global Thread-Safe State ---
 live_data_cache = {}
 active_match_threads = {}
 match_stop_events = {}
@@ -79,9 +71,8 @@ def shutdown_handler(sig, frame):
         return
     
     logging.info("Shutdown signal received. Telling all threads to stop...")
-    main_shutdown_event.set() # Stop main manager and writer
+    main_shutdown_event.set()
 
-    # --- FIX: Signal all active worker threads to stop ---
     with data_lock:
         # Create a list of items to avoid 'dict changed size during iteration'
         stop_events_list = list(match_stop_events.items())
@@ -96,11 +87,10 @@ def setup_driver():
     try:
         options = chromeOptions() if DEPLOYED else EdgeOptions()
         if HEADLESS:
-            options.add_argument("--headless") # Use headless mode
+            options.add_argument("--headless")
         options.add_argument("--no-sandbox")
         options.add_argument("--disable-dev-shm-usage") # Crucial for Docker
         options.add_argument("--disable-gpu")
-        # options.add_argument("--window-size=1920,1080")
         options.add_argument(
             "user-agent=Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/98.0.4758.102 Safari/537.36"
         )
@@ -133,7 +123,6 @@ def write_to_json(data, filename):
     try:
         os.makedirs(os.path.dirname(filename), exist_ok=True)
         temp_dir = os.path.dirname(filename)
-        # Use a unique temp file name
         temp_fd, temp_path = tempfile.mkstemp(dir=temp_dir, text=True)
         
         with os.fdopen(temp_fd, 'w', encoding='utf-8') as temp_f:
@@ -152,12 +141,10 @@ def write_to_json(data, filename):
 
 
 # --- Scraping Helper Functions ---
-
 def _parse_odds_table(table_body):
     """Helper to parse a standard odds/bookmarker table body element."""
     data = []
     try:
-        # Select rows that are not headers and have more than one cell (i.e., are data rows)
         team_rows = table_body.find_elements(By.XPATH, ".//tr[position() > 1 and count(td) > 1]")
         
         for row in team_rows:
@@ -165,29 +152,30 @@ def _parse_odds_table(table_body):
                 team_name_element = row.find_element(By.CSS_SELECTOR, "span.in-play-title")
                 team_name = team_name_element.text
                 if not team_name:
-                    continue # Skip if no team name
+                    continue
             except NoSuchElementException:
-                continue # Skip row if it doesn't have a title
+                continue
 
-            back_prices = []
+            # Find all prices and sizes in bulk
             try:
-                for el in row.find_elements(By.CSS_SELECTOR, "a.btn-back"):
-                    price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
-                    size = el.find_element(By.CSS_SELECTOR, "span").text.strip()
-                    if price:
-                        back_prices.append({"price": price, "size": size})
-            except NoSuchElementException:
-                pass # Ignore if price/size elements aren't found
+                back_price_els = row.find_elements(By.CSS_SELECTOR, "a.btn-back div")
+                back_size_els = row.find_elements(By.CSS_SELECTOR, "a.btn-back span")
+                back_prices = [
+                    {"price": price.text.strip(), "size": size.text.strip()}
+                    for price, size in zip(back_price_els, back_size_els)
+                    if price.text.strip()
+                ]
 
-            lay_prices = []
-            try:
-                for el in row.find_elements(By.CSS_SELECTOR, "a.btn-lay"):
-                    price = el.find_element(By.CSS_SELECTOR, "div").text.strip()
-                    size = el.find_element(By.CSS_SELECTOR, "span").text.strip()
-                    if price:
-                        lay_prices.append({"price": price, "size": size})
-            except NoSuchElementException:
-                pass # Ignore if price/size elements aren't found
+                lay_price_els = row.find_elements(By.CSS_SELECTOR, "a.btn-lay div")
+                lay_size_els = row.find_elements(By.CSS_SELECTOR, "a.btn-lay span")
+                lay_prices = [
+                    {"price": price.text.strip(), "size": size.text.strip()}
+                    for price, size in zip(lay_price_els, lay_size_els)
+                    if price.text.strip()
+                ]
+            except StaleElementReferenceException:
+                logging.warning("Stale element while parsing prices in odds table.")
+                continue
             
             data.append({
                 "team_name": team_name,
@@ -196,7 +184,7 @@ def _parse_odds_table(table_body):
             })
     except StaleElementReferenceException:
         logging.warning("Stale element reference while parsing odds table.")
-        return [] # Return partial or empty data
+        return []
     except Exception as e:
         logging.error(f"Error parsing odds table: {e}")
         return []
@@ -224,15 +212,12 @@ def scrape_bookmarker(driver, wait):
     Returns: List of scraped data, or empty list on failure.
     """
     try:
-        # This XPath points to the container, the parsing function finds the tbody
         bookmarker_xpath = "//*[@id='root']/body/div[6]/div[2]/div/div[4]/div[2]"
         bookmarker_container = wait.until(EC.presence_of_element_located((By.XPATH, bookmarker_xpath)))
         
-        # The user's provided XPath has an extra div[2], let's try to find the tbody directly
         try:
             table_body = bookmarker_container.find_element(By.XPATH, ".//div[2]/table/tbody")
         except NoSuchElementException:
-            # Fallback to original assumption
             table_body = bookmarker_container.find_element(By.XPATH, ".//table/tbody")
 
         return _parse_odds_table(table_body)
@@ -253,29 +238,37 @@ def scrape_fancy_and_sessions(driver, wait):
     try:
         fancy_xpath = "//*[@id='root']/body/div[6]/div[2]/div/div[5]/div/div[4]/table/tbody"
         fancy_container = wait.until(EC.presence_of_element_located((By.XPATH, fancy_xpath)))
-        # Select rows that are not headers
-        market_rows = fancy_container.find_elements(By.XPATH, ".//tr[not(contains(@class, 'bet-all-new')) and not(contains(@class, 'brblumobile'))]")
+
+        base_selector = "tr:not(.bet-all-new):not(.brblumobile)"
         
-        for row in market_rows:
+        # Find all elements in bulk.
+        market_names = fancy_container.find_elements(By.CSS_SELECTOR, f"{base_selector} span.marketnamemobile")
+        lay_vals = fancy_container.find_elements(By.CSS_SELECTOR, f"{base_selector} a.btn-lay div")
+        lay_sizes = fancy_container.find_elements(By.CSS_SELECTOR, f"{base_selector} a.btn-lay span")
+        back_vals = fancy_container.find_elements(By.CSS_SELECTOR, f"{base_selector} a.btn-back div")
+        back_sizes = fancy_container.find_elements(By.CSS_SELECTOR, f"{base_selector} a.btn-back span")
+
+        if not (len(market_names) == len(lay_vals) == len(lay_sizes) == len(back_vals) == len(back_sizes)):
+            logging.warning(
+                f"Fancy/Session element count mismatch. "
+                f"Names: {len(market_names)}, LayVals: {len(lay_vals)}, BackVals: {len(back_vals)}. "
+                f"This may happen during a page update. Skipping this cycle."
+            )
+            return [], [] 
+
+        # Process the bulk-fetched data
+        for i in range(len(market_names)):
             try:
-                market_name = row.find_element(By.CSS_SELECTOR, "span.marketnamemobile").text.strip()
+                market_name = market_names[i].text.strip()
                 if not market_name:
                     continue
 
-                lay_btn = row.find_element(By.CSS_SELECTOR, "a.btn-lay")
-                no_val = lay_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
-                no_size = lay_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
-
-                back_btn = row.find_element(By.CSS_SELECTOR, "a.btn-back")
-                yes_val = back_btn.find_element(By.CSS_SELECTOR, "div").text.strip()
-                yes_size = back_btn.find_element(By.CSS_SELECTOR, "span").text.strip()
-                
                 market_item = {
                     "name": market_name, 
-                    "no_val": no_val, 
-                    "no_size": no_size, 
-                    "yes_val": yes_val, 
-                    "yes_size": yes_size
+                    "no_val": lay_vals[i].text.strip(), 
+                    "no_size": lay_sizes[i].text.strip(), 
+                    "yes_val": back_vals[i].text.strip(), 
+                    "yes_size": back_sizes[i].text.strip()
                 }
 
                 # Simple check for session markets
@@ -284,8 +277,9 @@ def scrape_fancy_and_sessions(driver, wait):
                 else:
                     fancy_data.append(market_item)
             except (NoSuchElementException, StaleElementReferenceException):
-                logging.warning(f"Could not parse a row in Fancy/Session market. Skipping row.")
-                continue # Skip this row
+                logging.warning(f"Could not parse a row in Fancy/Session bulk parse. Skipping row.")
+                continue
+
     except (TimeoutException, NoSuchElementException, StaleElementReferenceException):
         logging.warning("Could not find or scrape Fancy/Session data.")
         return [], []
@@ -303,14 +297,10 @@ def scrape_match_page_data(driver, is_live_match):
     Differentiates logic based on whether the match is live or old.
     """
     wait = WebDriverWait(driver, WEB_DRIVER_TIMEOUT)
-    # Initialize as a generic dict to avoid strict type inference issues
     scraped_data: dict = {}
-    scraped_data["last_updated"] = time.time()
     
-    # Check for match result text
     result_text = "In Progress"
     try:
-        # This element might not exist, so use a shorter wait
         short_wait = WebDriverWait(driver, 2)
         result_element = short_wait.until(
             EC.presence_of_element_located((By.CSS_SELECTOR, "div.match-result-text"))
@@ -318,26 +308,24 @@ def scrape_match_page_data(driver, is_live_match):
         if result_element:
             result_text = result_element.text.strip()
             if not result_text:
-                result_text = "Finished" # Found element but it was empty
-            # Don't log this for old matches, too noisy
+                result_text = "Finished"
             if is_live_match:
                 logging.info(f"Match result found: '{result_text}'")
     except (TimeoutException, NoSuchElementException):
-        pass # No result found, assume "In Progress" for now
+        pass
     
     scraped_data["result"] = result_text
 
     if is_live_match:
-        # Live match: Scrape odds, bookmarker, fancy
         scraped_data["odds"] = scrape_match_odds(driver, wait)
         scraped_data["bookmarker"] = scrape_bookmarker(driver, wait)
         fancy_data, session_data = scrape_fancy_and_sessions(driver, wait)
         scraped_data["fancy"] = fancy_data
         scraped_data["sessions"] = session_data
     else:
-        # Old match: Scrape winner, bookmarker
-        scraped_data["winner"] = scrape_match_odds(driver, wait) # 'winner' is the 'Match Odds' table
+        scraped_data["winner"] = scrape_match_odds(driver, wait)
         scraped_data["bookmarker"] = scrape_bookmarker(driver, wait)
+    scraped_data["last_updated"] = time.time()
 
     return scraped_data
 
@@ -357,7 +345,6 @@ def scrape_match_worker(match_id, teams, stop_event):
 
     while not stop_event.is_set() and not match_finished:
         try:
-            # --- Driver Setup Loop ---
             if not thread_driver:
                 logging.info("Setting up new driver...")
                 thread_driver = setup_driver()
@@ -366,30 +353,27 @@ def scrape_match_worker(match_id, teams, stop_event):
                     logging.error(f"Failed to setup driver. Attempt {consecutive_driver_errors}/5.")
                     if consecutive_driver_errors >= 5:
                         logging.critical("Failed to setup driver 5 times. Exiting thread.")
-                        break # Exit outer loop, killing thread
-                    
-                    # Wait, but be responsive to stop_event
+                        break
+
                     stop_event.wait(timeout=10) 
-                    continue # Retry driver setup
+                    continue
                 
                 thread_driver.get(match_url)
                 WebDriverWait(thread_driver, WEB_DRIVER_TIMEOUT).until(
                     EC.presence_of_element_located((By.ID, "root")) 
                 )
                 logging.info("Driver setup and page load successful.")
-                consecutive_driver_errors = 0 # Reset driver error count
+                consecutive_driver_errors = 0
 
             # --- Inner Scraping Loop ---
             while not stop_event.is_set():
                 try:
-                    # Call the new function for a live match
                     live_data = scrape_match_page_data(thread_driver, is_live_match=True)
                     
-                    # Check the result field
                     if live_data["result"] != "In Progress":
                         logging.info(f"Match result found ('{live_data['result']}'). Stopping.")
                         match_finished = True
-                        break # Exit inner loop
+                        break
                     
                     live_data["match_id"] = match_id
                     live_data["teams"] = teams
@@ -397,7 +381,7 @@ def scrape_match_worker(match_id, teams, stop_event):
                     with data_lock:
                         live_data_cache[match_id] = live_data
                     
-                    consecutive_scrape_errors = 0 # Reset scrape error count
+                    consecutive_scrape_errors = 0
                 
                 except (TimeoutException, NoSuchElementException, StaleElementReferenceException) as e:
                     logging.warning(f"Error scraping details: {e}. Retrying scrape...")
@@ -405,53 +389,41 @@ def scrape_match_worker(match_id, teams, stop_event):
                     if consecutive_scrape_errors > 5:
                         logging.error("Too many consecutive scrape errors. Breaking to restart driver.")
                         consecutive_scrape_errors = 0
-                        break # Exit inner loop to force driver restart
+                        break
                     try:
-                        thread_driver.refresh() # Try a simple refresh first
+                        thread_driver.refresh()
                     except WebDriverException as e_refresh:
                         logging.error(f"Driver exception on refresh: {e_refresh}. Breaking to restart driver.")
-                        break # Exit inner loop
+                        break
 
                 except WebDriverException as e:
                     logging.error(f"Driver exception (e.g., crash, timeout): {e}")
                     logging.error("Breaking to restart driver.")
-                    break # Exit inner loop to force driver restart
+                    break
                 
                 except Exception as e:
                     logging.critical(f"Unhandled error in scrape loop: {e}. Breaking to restart driver.")
-                    break # Exit inner loop
+                    break
 
-                # Wait for the interval, but be interruptible by stop_event
                 stop_event.wait(timeout=SCRAPE_INTERVAL_SECONDS)
-                
-                if not stop_event.is_set() and not match_finished:
-                    # Refresh the page *before* the next scrape
-                    try:
-                        thread_driver.refresh()
-                    except WebDriverException as e:
-                        logging.error(f"Driver exception on refresh: {e}. Breaking to restart driver.")
-                        break # Exit inner loop
         
         except WebDriverException as e:
             logging.critical(f"Unhandled WebDriver error in outer worker loop: {e}")
-            # This exception (like timeout) is the one from the log
-            # The loop will now retry setup_driver, which is correct
 
         except Exception as e:
             logging.critical(f"Unhandled error in outer worker loop: {e}")
         
         finally:
-            # This block executes when the inner loop breaks (e.g., driver crash)
             if thread_driver:
                 logging.info("Quitting current driver instance.")
                 try:
                     thread_driver.quit()
                 except Exception:
-                    pass # Ignore errors on quit
+                    pass
                 thread_driver = None
             if not stop_event.is_set() and not match_finished:
                 logging.info("Waiting 5s before creating new driver...")
-                stop_event.wait(timeout=5) # Wait, but be responsive
+                stop_event.wait(timeout=5)
 
     # --- Thread Cleanup ---
     logging.info(f"Cleaned up and stopped (Match Finished: {match_finished}).")
@@ -472,18 +444,16 @@ def write_data_loop():
     while not main_shutdown_event.is_set():
         try:
             with data_lock:
-                # Create a snapshot of the data to write
                 all_live_data = list(live_data_cache.values())
 
             if len(all_live_data) == 0:
-                pass # Don't write empty data
+                pass
             else:
                 write_to_json(all_live_data, DATA_FILE)
             
         except Exception as e:
             logging.error(f"[DataWriter] Error writing JSON: {e}")
         
-        # Wait for the interval, but be interruptible
         main_shutdown_event.wait(timeout=SCRAPE_INTERVAL_SECONDS)
     logging.info("Data writer stopped.")
 
@@ -524,7 +494,6 @@ def main_manager():
             live_rows_xpath = ".//tr[.//div[contains(@class, 'livenownew')]]"
 
             try:
-                # --- PASS 1: Get the *count* of matches first ---
                 tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
                 live_rows = tbody.find_elements(By.XPATH, live_rows_xpath)
 
@@ -537,6 +506,7 @@ def main_manager():
                     if main_shutdown_event.is_set():
                         break
                     try:
+                        # 1. Re-fetch the tbody and live rows to avoid stale references
                         tbody = wait.until(EC.presence_of_element_located((By.XPATH, match_table_xpath)))
                         live_rows = tbody.find_elements(By.XPATH, live_rows_xpath)
                         
@@ -570,18 +540,17 @@ def main_manager():
 
                     except (StaleElementReferenceException, NoSuchElementException, TimeoutException) as e:
                         logging.warning(f"Error processing match index {i}: {e}. Skipping.")
-                        # Reset driver state by going back to the list page
                         try:
                             manager_driver.get(f"{TARGET_URL}/game/4")
                         except Exception as e_nav:
                             logging.error(f"Failed to navigate back to list page after error: {e_nav}. Breaking cycle.")
-                            break # Critical failure, exit the for loop
-                        continue # Continue to the next 'i'
+                            break
+                        continue
                 
                 if main_shutdown_event.is_set():
                     break
 
-                # --- PASS 2: Start new threads ---
+                # --- Start new threads ---
                 logging.info(f"Extracted {len(matches_to_start)} live matches. Checking for new threads to start...")
                 for match_info in matches_to_start:
                     if main_shutdown_event.is_set():
@@ -619,9 +588,7 @@ def main_manager():
                 logging.error(f"Error in main manager cycle: {e}")
 
             # --- Cleanup Logic ---
-            
-            # --- Stop Stale Threads ---
-            # Find threads for matches that are *no longer* in the live list
+
             with data_lock:
                 active_ids = set(active_match_threads.keys())
             
@@ -631,7 +598,7 @@ def main_manager():
                 with data_lock:
                     for match_id in ids_to_stop:
                         if match_id in match_stop_events:
-                            match_stop_events[match_id].set() # <-- Signal thread to stop
+                            match_stop_events[match_id].set()
 
             # --- Clean Up Dead Threads ---
             dead_threads = []
@@ -655,11 +622,9 @@ def main_manager():
                 active_count = len(active_match_threads)
 
             logging.info(f"Manager cycle complete. Active threads: {active_count}. Waiting {LIST_REFRESH_INTERVAL_SECONDS}s...")
-            # Wait for interval, but be interruptible
             main_shutdown_event.wait(timeout=LIST_REFRESH_INTERVAL_SECONDS)
 
         except KeyboardInterrupt:
-            # This is caught by the signal handler, but good as a failsafe
             logging.info("\nKeyboardInterrupt caught in manager loop. Shutting down.")
             main_shutdown_event.set()
         except Exception as e:
@@ -668,9 +633,9 @@ def main_manager():
                 try:
                     manager_driver.quit()
                 except Exception:
-                    pass # Ignore errors on quit
+                    pass
                 manager_driver = None
-            main_shutdown_event.wait(timeout=30) # Wait before retrying
+            main_shutdown_event.wait(timeout=30)
 
     # --- Manager Shutdown ---
     if manager_driver:
@@ -678,11 +643,10 @@ def main_manager():
         try:
             manager_driver.quit()
         except Exception:
-            pass # Ignore errors on quit
+            pass
     logging.info("Main manager loop exited.")
 
 if __name__ == "__main__":
-    # Register signal handlers for graceful shutdown
     signal.signal(signal.SIGINT, shutdown_handler)
     signal.signal(signal.SIGTERM, shutdown_handler)
 
@@ -690,7 +654,6 @@ if __name__ == "__main__":
     logging.info(f"DEPLOYED: {DEPLOYED}")
     logging.info(f"Writing LIVE data to: {DATA_FILE}")
     
-    # Start the thread to write LIVE data
     writer_thread = threading.Thread(target=write_data_loop, name="DataWriter", daemon=True)
     writer_thread.start()
 
@@ -701,22 +664,20 @@ if __name__ == "__main__":
     finally:
         logging.info("Main manager has exited. Initiating final shutdown.")
         
-        # Ensure all threads are signaled (in case shutdown_handler wasn't triggered)
         if not main_shutdown_event.is_set():
             logging.info("Main loop exited cleanly. Signaling all threads to stop.")
-            shutdown_handler(None, None) # Call handler to stop all threads
+            shutdown_handler(None, None)
         
         # Wait for data writer
         logging.info("Waiting for data writer to finish...")
         writer_thread.join(timeout=max(1.0, SCRAPE_INTERVAL_SECONDS * 1.5))
     
         with data_lock:
-            # Create a list to avoid iterating over a changing dict
             active_threads_list = list(active_match_threads.values())
         
         logging.info(f"Waiting for {len(active_threads_list)} worker thread(s) to join...")
         for t in active_threads_list:
-            t.join(timeout=5.0) # Give each thread 5s to join
+            t.join(timeout=5.0)
             if t.is_alive():
                 logging.warning(f"Thread {t.name} did not exit cleanly.")
         

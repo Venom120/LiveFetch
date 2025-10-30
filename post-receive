@@ -1,0 +1,24 @@
+#!/bin/bash
+
+# Define directories
+GIT_DIR="/home/ubuntu/LiveFetch.git"
+TARGET_DIR="/home/ubuntu/LiveFetch"
+COMPOSE_DIR="/home/ubuntu/"
+
+# --- 1. Checkout latest code from the bare repo ---
+echo "Deploying latest code changes..."
+
+# Checkout code files
+git --work-tree="${TARGET_DIR}" --git-dir="${GIT_DIR}" checkout --force main
+
+echo "Code deployed successfully."
+echo ""
+
+# --- 2. Rebuild and restart services using Docker Compose ---
+echo "Building and restarting Docker containers..."
+
+# Navigate to the directory with docker-compose.yml and run it
+cd "${COMPOSE_DIR}" || exit
+docker compose up -d --build --remove-orphans
+
+echo "Deployment complete."

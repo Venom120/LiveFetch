@@ -1,5 +1,3 @@
-# /home/ubuntu/LiveFetch/api_server.py
-
 import json
 import os
 from flask import Flask, jsonify, make_response
@@ -37,9 +35,8 @@ def get_live_data():
             data = json.load(f)
 
         if len(data) == 0:
-            error_msg = {"error": "No live match currently ongoing, For previous data, please refer visit this link 'https://livefetch.venoms.app/api/old-data'."}
+            error_msg = {"error": "No live match currently ongoing."}
             return jsonify(error_msg)
-        # Return the data as a JSON response
         return jsonify(data)
 
     except FileNotFoundError:
@@ -53,8 +50,7 @@ def get_live_data():
     except Exception as e:
         error_msg = {"error": "An unexpected error occurred.", "details": str(e)}
         return make_response(jsonify(error_msg), HTTPStatus.INTERNAL_SERVER_ERROR)
-    
-# --- Run the Server ---
+
 
 if __name__ == "__main__":
     # For production, use a WSGI server like Gunicorn

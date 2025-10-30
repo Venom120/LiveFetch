@@ -1,36 +1,35 @@
 [
     {
-        "last_updated": 1761818139.3083067,
         "result": "In Progress",
         "odds": [
             {
                 "team_name": "United Arab Emirates",
                 "back": [
                     {
-                        "price": "1.7",
-                        "size": "447.6"
+                        "price": "1.37",
+                        "size": "1.9K"
                     },
                     {
-                        "price": "1.71",
-                        "size": "195.3"
+                        "price": "1.38",
+                        "size": "241.3"
                     },
                     {
-                        "price": "1.72",
-                        "size": "1.6"
+                        "price": "1.39",
+                        "size": "108.6"
                     }
                 ],
                 "lay": [
                     {
-                        "price": "1.74",
-                        "size": "242.5"
+                        "price": "1.4",
+                        "size": "12.1"
                     },
                     {
-                        "price": "1.75",
-                        "size": "2.8K"
+                        "price": "1.41",
+                        "size": "846.3"
                     },
                     {
-                        "price": "1.76",
-                        "size": "752.1"
+                        "price": "1.42",
+                        "size": "43.1"
                     }
                 ]
             },
@@ -38,30 +37,30 @@
                 "team_name": "Nepal",
                 "back": [
                     {
-                        "price": "2.26",
-                        "size": "6.1"
+                        "price": "3.35",
+                        "size": "17.4"
                     },
                     {
-                        "price": "2.32",
-                        "size": "2.7K"
+                        "price": "3.4",
+                        "size": "351.9"
                     },
                     {
-                        "price": "2.34",
-                        "size": "180.3"
+                        "price": "3.5",
+                        "size": "4.8"
                     }
                 ],
                 "lay": [
                     {
-                        "price": "2.4",
-                        "size": "1.1"
+                        "price": "3.55",
+                        "size": "3.2"
                     },
                     {
-                        "price": "2.42",
-                        "size": "139.2"
+                        "price": "3.6",
+                        "size": "38.8"
                     },
                     {
-                        "price": "2.44",
-                        "size": "310.6"
+                        "price": "3.65",
+                        "size": "91.2"
                     }
                 ]
             }
@@ -71,29 +70,29 @@
                 "team_name": "United Arab Emirates",
                 "back": [
                     {
-                        "price": "65",
+                        "price": "36",
                         "size": "2L"
                     },
                     {
-                        "price": "66",
+                        "price": "37",
                         "size": "2L"
                     },
                     {
-                        "price": "67",
+                        "price": "38",
                         "size": "2L"
                     }
                 ],
                 "lay": [
                     {
-                        "price": "72",
+                        "price": "41",
                         "size": "2L"
                     },
                     {
-                        "price": "73",
+                        "price": "42",
                         "size": "2L"
                     },
                     {
-                        "price": "74",
+                        "price": "43",
                         "size": "2L"
                     }
                 ]
@@ -103,7 +102,7 @@
                 "back": [],
                 "lay": [
                     {
-                        "price": "149",
+                        "price": "263",
                         "size": "50K"
                     }
                 ]
@@ -111,56 +110,56 @@
         ],
         "fancy": [
             {
-                "name": "1st Wkt UAE",
-                "no_val": "33",
+                "name": "1st 2 Wkt UAE",
+                "no_val": "84",
                 "no_size": "110",
-                "yes_val": "33",
+                "yes_val": "84",
                 "yes_size": "90"
             },
             {
-                "name": "A Sharafu Boundaries",
+                "name": "Aryansh Sharma Boundaries",
                 "no_val": "5",
                 "no_size": "100",
                 "yes_val": "6",
                 "yes_size": "100"
             },
             {
-                "name": "H.M.B Face By A Sharafu",
-                "no_val": "36",
-                "no_size": "110",
-                "yes_val": "36",
-                "yes_size": "90"
+                "name": "H.M.B Face By Aryansh Sharma",
+                "no_val": "62",
+                "no_size": "105",
+                "yes_val": "62",
+                "yes_size": "85"
             },
             {
-                "name": "Aryansh Sharma Boundaries",
+                "name": "Shoaib Khan Boundaries",
                 "no_val": "2",
                 "no_size": "100",
                 "yes_val": "3",
                 "yes_size": "100"
             },
             {
-                "name": "H.M.B Face By Aryansh Sharma",
-                "no_val": "29",
+                "name": "H.M.B Face By Shoaib Khan",
+                "no_val": "36",
                 "no_size": "110",
-                "yes_val": "29",
+                "yes_val": "36",
                 "yes_size": "90"
             },
             {
-                "name": "1st Wkt Lost To UAE Balls",
-                "no_val": "40",
+                "name": "2nd Wkt Lost To UAE Balls",
+                "no_val": "95",
                 "no_size": "110",
-                "yes_val": "40",
+                "yes_val": "95",
                 "yes_size": "90"
             },
             {
-                "name": "1st Wkt Pship Boundaries UAE",
-                "no_val": "4",
+                "name": "2nd Wkt Pship Boundaries UAE",
+                "no_val": "2",
                 "no_size": "100",
-                "yes_val": "5",
+                "yes_val": "3",
                 "yes_size": "100"
             },
             {
-                "name": "1st Wkt Caught Out UAE @ 1",
+                "name": "2nd Wkt Caught Out UAE @ 1",
                 "no_val": "1",
                 "no_size": "75",
                 "yes_val": "1",
@@ -169,90 +168,97 @@
         ],
         "sessions": [
             {
-                "name": "10 Over UAE",
-                "no_val": "45",
+                "name": "15 Over UAE",
+                "no_val": "78",
                 "no_size": "100",
-                "yes_val": "46",
+                "yes_val": "79",
                 "yes_size": "100"
             },
             {
-                "name": "4th Over Runs Only UAE",
+                "name": "12 Over UAE",
                 "no_val": "",
                 "no_size": "00",
                 "yes_val": "",
                 "yes_size": "00"
             },
             {
-                "name": "1st Wkt UAE Run Bhav",
-                "no_val": "13",
-                "no_size": "8",
-                "yes_val": "13",
-                "yes_size": "5"
+                "name": "13th Over Runs Only UAE",
+                "no_val": "",
+                "no_size": "00",
+                "yes_val": "",
+                "yes_size": "00"
             },
             {
-                "name": "A Sharafu Runs",
-                "no_val": "31",
-                "no_size": "100",
-                "yes_val": "31",
-                "yes_size": "80"
-            },
-            {
-                "name": "A Sharafu Run Bhav",
-                "no_val": "10",
+                "name": "2nd Wkt UAE Run Bhav",
+                "no_val": "64",
                 "no_size": "8",
-                "yes_val": "10",
+                "yes_val": "64",
                 "yes_size": "5"
             },
             {
                 "name": "Aryansh Sharma Runs",
-                "no_val": "19",
+                "no_val": "36",
                 "no_size": "110",
-                "yes_val": "19",
+                "yes_val": "36",
                 "yes_size": "90"
             },
             {
                 "name": "Aryansh Sharma Run Bhav",
-                "no_val": "3",
+                "no_val": "17",
                 "no_size": "9",
-                "yes_val": "3",
+                "yes_val": "17",
+                "yes_size": "6"
+            },
+            {
+                "name": "Shoaib Khan Runs",
+                "no_val": "20",
+                "no_size": "105",
+                "yes_val": "20",
+                "yes_size": "85"
+            },
+            {
+                "name": "Shoaib Khan Run Bhav",
+                "no_val": "1",
+                "no_size": "10",
+                "yes_val": "1",
                 "yes_size": "6"
             }
         ],
+        "last_updated": 1761820567.6832573,
         "match_id": "34898034",
         "teams": "United Arab Emirates v Nepal"
     },
     {
-        "last_updated": 1761818139.7147207,
         "result": "In Progress",
         "odds": [
             {
                 "team_name": "Australia W",
                 "back": [
                     {
-                        "price": "1.28",
-                        "size": "48.2K"
+                        "price": "1.2",
+                        "size": "151.3K"
                     },
                     {
-                        "price": "1.29",
-                        "size": "40.6K"
+                        "price": "1.21",
+                        "size": "58.0K"
                     },
                     {
-                        "price": "1.3",
-                        "size": "6.7K"
+                        "price": "1.22",
+                        "size": "7.4K"
                     }
                 ],
                 "lay": [
                     {
-                        "price": "1.31",
-                        "size": "14.3K"
+                        "price": "1.23",
+                        "size": "16.8K"
                     },
                     {
-                        "price": "1.32",
-                        "size": "13.2K"
+                        "price": "1.24",
+                        "size": "7.7K"
                     },
                     {
-                        "price": "1.33",
-                        "size": "15.1K"
+                        "price": "1.25",
+                        "size": "66.7K"
                     }
                 ]
             },
@@ -260,30 +266,30 @@
                 "team_name": "India W",
                 "back": [
                     {
-                        "price": "4",
-                        "size": "5.0K"
+                        "price": "5.2",
+                        "size": "1.8"
                     },
                     {
-                        "price": "4.1",
-                        "size": "3.9K"
+                        "price": "5.3",
+                        "size": "3.8K"
                     },
                     {
-                        "price": "4.2",
-                        "size": "4.9K"
+                        "price": "5.4",
+                        "size": "94.3"
                     }
                 ],
                 "lay": [
                     {
-                        "price": "4.3",
-                        "size": "7.7"
+                        "price": "5.6",
+                        "size": "1.6K"
                     },
                     {
-                        "price": "4.4",
-                        "size": "2.1K"
+                        "price": "5.7",
+                        "size": "151.1"
                     },
                     {
-                        "price": "4.5",
-                        "size": "11.6K"
+                        "price": "5.8",
+                        "size": "12.0K"
                     }
                 ]
             }
@@ -293,29 +299,29 @@
                 "team_name": "Australia W",
                 "back": [
                     {
-                        "price": "28",
+                        "price": "20",
                         "size": "10L"
                     },
                     {
-                        "price": "29",
+                        "price": "21",
                         "size": "10L"
                     },
                     {
-                        "price": "30",
+                        "price": "22",
                         "size": "10L"
                     }
                 ],
                 "lay": [
                     {
-                        "price": "32",
+                        "price": "23.5",
                         "size": "10L"
                     },
                     {
-                        "price": "33",
+                        "price": "24.5",
                         "size": "10L"
                     },
                     {
-                        "price": "34",
+                        "price": "25.5",
                         "size": "10L"
                     }
                 ]
@@ -325,7 +331,7 @@
                 "back": [],
                 "lay": [
                     {
-                        "price": "333",
+                        "price": "454",
                         "size": "2.5L"
                     }
                 ]
@@ -333,77 +339,70 @@
         ],
         "fancy": [
             {
-                "name": "1st Wkt AUSW",
-                "no_val": "58",
-                "no_size": "115",
-                "yes_val": "58",
-                "yes_size": "95"
-            },
-            {
                 "name": "1st 2 Wkt AUSW",
-                "no_val": "106",
-                "no_size": "115",
-                "yes_val": "106",
-                "yes_size": "95"
+                "no_val": "117",
+                "no_size": "110",
+                "yes_val": "117",
+                "yes_size": "90"
             },
             {
                 "name": "1st 3 Wkt AUSW",
-                "no_val": "155",
+                "no_val": "162",
                 "no_size": "110",
-                "yes_val": "155",
+                "yes_val": "162",
                 "yes_size": "90"
             },
             {
                 "name": "1st 4 Wkt AUSW",
-                "no_val": "203",
+                "no_val": "210",
                 "no_size": "110",
-                "yes_val": "203",
+                "yes_val": "210",
                 "yes_size": "90"
             },
             {
                 "name": "P Litchfield Boundaries",
-                "no_val": "9",
-                "no_size": "100",
-                "yes_val": "10",
-                "yes_size": "100"
+                "no_val": "14",
+                "no_size": "115",
+                "yes_val": "14",
+                "yes_size": "85"
             },
             {
                 "name": "H.M.B Face By P Litchfield",
-                "no_val": "46",
+                "no_val": "71",
                 "no_size": "110",
-                "yes_val": "46",
+                "yes_val": "71",
                 "yes_size": "90"
             },
             {
-                "name": "A Healy Boundaries",
-                "no_val": "4",
-                "no_size": "100",
-                "yes_val": "5",
-                "yes_size": "100"
-            },
-            {
-                "name": "H.M.B Face By A Healy",
-                "no_val": "38",
-                "no_size": "120",
-                "yes_val": "38",
-                "yes_size": "100"
-            },
-            {
-                "name": "1st Wkt Lost To AUSW Balls",
-                "no_val": "",
-                "no_size": "00",
-                "yes_val": "",
-                "yes_size": "00"
-            },
-            {
-                "name": "1st Wkt Pship Boundaries AUSW",
+                "name": "E Perry Boundaries",
                 "no_val": "9",
-                "no_size": "100",
-                "yes_val": "10",
-                "yes_size": "100"
+                "no_size": "115",
+                "yes_val": "9",
+                "yes_size": "85"
             },
             {
-                "name": "1st Wkt Caught Out AUSW @ 1",
+                "name": "H.M.B Face By E Perry",
+                "no_val": "58",
+                "no_size": "100",
+                "yes_val": "58",
+                "yes_size": "80"
+            },
+            {
+                "name": "2nd Wkt Lost To AUSW Balls",
+                "no_val": "107",
+                "no_size": "110",
+                "yes_val": "107",
+                "yes_size": "90"
+            },
+            {
+                "name": "2nd Wkt Pship Boundaries AUSW",
+                "no_val": "14",
+                "no_size": "115",
+                "yes_val": "14",
+                "yes_size": "85"
+            },
+            {
+                "name": "2nd Wkt Caught Out AUSW @ 1",
                 "no_val": "1",
                 "no_size": "70",
                 "yes_val": "1",
@@ -412,231 +411,155 @@
         ],
         "sessions": [
             {
-                "name": "1st Innings 10 Overs Line",
-                "no_val": "58",
-                "no_size": "29.0K",
-                "yes_val": "59",
-                "yes_size": "18.6K"
+                "name": "1st Innings 15 Overs Line",
+                "no_val": "101",
+                "no_size": "38.2",
+                "yes_val": "102",
+                "yes_size": "19.5K"
             },
             {
                 "name": "1st Innings 50 Overs Line",
-                "no_val": "321",
-                "no_size": "1.3K",
-                "yes_val": "322",
-                "yes_size": "6.4K"
+                "no_val": "327",
+                "no_size": "720.6",
+                "yes_val": "328",
+                "yes_size": "21.3K"
+            },
+            {
+                "name": "15 Over AUSW 1",
+                "no_val": "101",
+                "no_size": "110",
+                "yes_val": "101",
+                "yes_size": "90"
             },
             {
                 "name": "15 Over AUSW",
+                "no_val": "101",
+                "no_size": "110",
+                "yes_val": "101",
+                "yes_size": "90"
+            },
+            {
+                "name": "20 Over AUSW",
+                "no_val": "127",
+                "no_size": "100",
+                "yes_val": "129",
+                "yes_size": "100"
+            },
+            {
+                "name": "11.3 Over AUSW",
+                "no_val": "81",
+                "no_size": "100",
+                "yes_val": "82",
+                "yes_size": "100"
+            },
+            {
+                "name": "12 Over AUSW",
                 "no_val": "84",
                 "no_size": "100",
-                "yes_val": "86",
+                "yes_val": "85",
                 "yes_size": "100"
-            },
-            {
-                "name": "10 Over AUSW 1",
-                "no_val": "58",
-                "no_size": "100",
-                "yes_val": "59",
-                "yes_size": "100"
-            },
-            {
-                "name": "10 Over AUSW",
-                "no_val": "58",
-                "no_size": "100",
-                "yes_val": "59",
-                "yes_size": "100"
-            },
-            {
-                "name": "5.3 Over AUSW",
-                "no_val": "28",
-                "no_size": "100",
-                "yes_val": "29",
-                "yes_size": "100"
-            },
-            {
-                "name": "6 Over AUSW",
-                "no_val": "",
-                "no_size": "00",
-                "yes_val": "",
-                "yes_size": "00"
             },
             {
                 "name": "50 Over AUSW 1",
-                "no_val": "319",
+                "no_val": "326",
                 "no_size": "100",
-                "yes_val": "322",
+                "yes_val": "329",
                 "yes_size": "100"
             },
             {
                 "name": "50 Over AUSW",
-                "no_val": "318",
+                "no_val": "326",
                 "no_size": "100",
-                "yes_val": "321",
+                "yes_val": "329",
                 "yes_size": "100"
             },
             {
-                "name": "7th Over Runs Only AUSW",
-                "no_val": "6",
-                "no_size": "100",
-                "yes_val": "7",
-                "yes_size": "100"
+                "name": "13th Over Runs Only AUSW",
+                "no_val": "",
+                "no_size": "00",
+                "yes_val": "",
+                "yes_size": "00"
             },
             {
-                "name": "1st Wkt AUSW Run Bhav",
-                "no_val": "26",
+                "name": "2nd Wkt AUSW Run Bhav",
+                "no_val": "80",
                 "no_size": "6",
-                "yes_val": "26",
+                "yes_val": "80",
                 "yes_size": "3"
             },
             {
                 "name": "P Litchfield Runs",
-                "no_val": "51",
+                "no_val": "82",
                 "no_size": "110",
-                "yes_val": "51",
+                "yes_val": "82",
                 "yes_size": "90"
             },
             {
                 "name": "P Litchfield Run Bhav",
-                "no_val": "18",
+                "no_val": "47",
                 "no_size": "6",
-                "yes_val": "18",
+                "yes_val": "47",
                 "yes_size": "3"
             },
             {
-                "name": "A Healy Runs",
-                "no_val": "36",
+                "name": "E Perry Runs",
+                "no_val": "57",
                 "no_size": "110",
-                "yes_val": "36",
+                "yes_val": "57",
                 "yes_size": "90"
             },
             {
-                "name": "A Healy Run Bhav",
-                "no_val": "6",
-                "no_size": "7",
-                "yes_val": "6",
-                "yes_size": "4"
+                "name": "E Perry Run Bhav",
+                "no_val": "19",
+                "no_size": "6",
+                "yes_val": "19",
+                "yes_size": "3"
             },
             {
-                "name": "5.1 Ball Run AUSW",
-                "no_val": "26",
+                "name": "11.1 Ball Run AUSW",
+                "no_val": "80",
                 "no_size": "120",
-                "yes_val": "26",
+                "yes_val": "80",
                 "yes_size": "80"
             },
             {
-                "name": "5.2 Ball Run AUSW",
+                "name": "11.2 Ball Run AUSW",
                 "no_val": "",
                 "no_size": "00",
                 "yes_val": "",
                 "yes_size": "00"
             },
             {
-                "name": "5.3 Ball Run AUSW",
+                "name": "11.3 Ball Run AUSW",
                 "no_val": "",
                 "no_size": "00",
                 "yes_val": "",
                 "yes_size": "00"
             },
             {
-                "name": "5.4 Ball Run AUSW",
+                "name": "11.4 Ball Run AUSW",
                 "no_val": "",
                 "no_size": "00",
                 "yes_val": "",
                 "yes_size": "00"
             },
             {
-                "name": "5.5 Ball Run AUSW",
+                "name": "11.5 Ball Run AUSW",
                 "no_val": "",
                 "no_size": "00",
                 "yes_val": "",
                 "yes_size": "00"
             },
             {
-                "name": "5.6 Ball Run AUSW",
+                "name": "11.6 Ball Run AUSW",
                 "no_val": "",
                 "no_size": "00",
                 "yes_val": "",
                 "yes_size": "00"
             }
         ],
+        "last_updated": 1761820564.2621386,
         "match_id": "34886842",
         "teams": "Australia W v India W"
-    },
-    {
-        "last_updated": 1761818128.6247644,
-        "result": "In Progress",
-        "odds": [
-            {
-                "team_name": "The Draw",
-                "back": [],
-                "lay": []
-            },
-            {
-                "team_name": "Western Australia",
-                "back": [],
-                "lay": []
-            },
-            {
-                "team_name": "South Australia",
-                "back": [],
-                "lay": []
-            }
-        ],
-        "bookmarker": [],
-        "fancy": [
-            {
-                "name": "5th Wkt SA (2)",
-                "no_val": "307",
-                "no_size": "110",
-                "yes_val": "307",
-                "yes_size": "90"
-            },
-            {
-                "name": "J Lehmann Boundaries (2)",
-                "no_val": "10",
-                "no_size": "100",
-                "yes_val": "11",
-                "yes_size": "100"
-            },
-            {
-                "name": "N McAndrew Boundaries (2)",
-                "no_val": "",
-                "no_size": "00",
-                "yes_val": "",
-                "yes_size": "00"
-            },
-            {
-                "name": "5th WKT Pship Boundaries SA (2)",
-                "no_val": "",
-                "no_size": "00",
-                "yes_val": "",
-                "yes_size": "00"
-            },
-            {
-                "name": "5th WKT Caught Out SA @ 1 (2)",
-                "no_val": "1",
-                "no_size": "70",
-                "yes_val": "1",
-                "yes_size": "55"
-            }
-        ],
-        "sessions": [
-            {
-                "name": "J Lehmann Runs (2)",
-                "no_val": "58",
-                "no_size": "110",
-                "yes_val": "58",
-                "yes_size": "90"
-            },
-            {
-                "name": "N McAndrew Runs (2)",
-                "no_val": "",
-                "no_size": "00",
-                "yes_val": "",
-                "yes_size": "00"
-            }
-        ],
-        "match_id": "34867872",
-        "teams": "Western Australia v South Australia"
     }
 ]
