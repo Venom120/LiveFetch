@@ -10,7 +10,8 @@ echo "Deploying latest code changes..."
 
 # Checkout code files
 git --work-tree="${TARGET_DIR}" --git-dir="${GIT_DIR}" checkout --force main
-
+cd "${TARGET_DIR}" || exit
+chmod +x ./start.sh
 echo "Code deployed successfully."
 echo ""
 

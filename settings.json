@@ -1,7 +1,7 @@
 {
   "DEFAULT": {
-    "DEPLOYED": true,
-    "LEVEL": "ERROR"
+    "DEPLOYED": false,
+    "LEVEL": "INFO"
   },
   "Scraper": {
     "HEADLESS": true,
