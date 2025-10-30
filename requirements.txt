@@ -2,7 +2,6 @@ selenium
 requests
 flask
 gunicorn
-flask-cors
 signal
 logging
 pytest
