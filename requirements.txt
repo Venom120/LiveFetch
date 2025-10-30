@@ -2,6 +2,6 @@ selenium
 requests
 flask
 gunicorn
-Flask-Cors
+flask-cors
 pytest
 pytest-mock
