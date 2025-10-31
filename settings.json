@@ -1,6 +1,6 @@
 {
   "DEFAULT": {
-    "DEPLOYED": false,
+    "DEPLOYED": true,
     "LEVEL": "INFO"
   },
   "Scraper": {
@@ -9,6 +9,11 @@
     "SCRAPE_INTERVAL_SECONDS": 2,
     "LIST_REFRESH_INTERVAL_SECONDS": 10,
     "WEB_DRIVER_TIMEOUT": 10
+  },
+  "Api": {
+    "AUTH_URL": "https://api.radheexch.xyz/sso/auth/demo",
+    "MARKET_URL": "https://api.radheexch.xyz/marketprovider/markets/eventtype/4",
+    "OP_KEY": "RDE"
   },
   "Paths": {
     "DATA_DIR": "./data",

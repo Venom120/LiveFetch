@@ -1,28 +1,26 @@
-# /home/ubuntu/LiveFetch/tests/test_settings.py
-
 import pytest
 import tempfile
 import os
 import json
 
+# This is a bit unusual, but we need to import the app from api_server
+# *after* we've had a chance to potentially patch its config path.
+# For simplicity, we'll just import it.
 from api_server import app as flask_app 
 
 # Load the config manually from settings.json
-# This assumes test_settings.py is in 'tests/' and settings.json is one level up
 SETTINGS_PATH = os.path.join(os.path.dirname(__file__), '..', 'settings.json')
 try:
     with open(SETTINGS_PATH, 'r') as f:
         api_config = json.load(f)
 except Exception as e:
     print(f"FATAL ERROR in test_settings: Could not load {SETTINGS_PATH}. {e}")
-    # Provide a minimal fallback so tests don't crash
     api_config = {"Paths": {"DATA_FILE": "live_data.json"}}
 
 
 @pytest.fixture(scope='module')
 def client():
     """Create a test client for the Flask app."""
-    # This now uses the flask_app imported above
     with flask_app.test_client() as client:
         yield client
 

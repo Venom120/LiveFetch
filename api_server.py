@@ -1,3 +1,4 @@
+import sys
 import json
 import os
 from flask import Flask, jsonify, make_response
@@ -5,21 +6,30 @@ from flask_cors import CORS
 from http import HTTPStatus
 
 # --- Configuration ---
-with open('settings.json', 'r') as f:
-    config = json.load(f)
+try:
+    with open('settings.json', 'r') as f:
+        config = json.load(f)
+except FileNotFoundError:
+    print("FATAL ERROR: settings.json not found. Please create it.", file=sys.stderr)
+    config = {}
+except json.JSONDecodeError:
+    print("FATAL ERROR: settings.json is not valid JSON.", file=sys.stderr)
+    config = {}
 
-DEPLOYED = config['DEFAULT']['DEPLOYED']
+
+DEPLOYED = config.get('DEFAULT', {}).get('DEPLOYED', False)
 
 # Determine JSON data file path
 if DEPLOYED:
-    data_dir = config['Paths']['DEPLOYED_DATA_DIR']
+    data_dir = config.get('Paths', {}).get('DEPLOYED_DATA_DIR', '/app/data')
 else:
-    data_dir = config['Paths']['DATA_DIR']
-DATA_FILE = os.path.join(data_dir, config['Paths']['DATA_FILE'])
+    data_dir = config.get('Paths', {}).get('DATA_DIR', './data')
+DATA_FILE = os.path.join(data_dir, config.get('Paths', {}).get('DATA_FILE', 'live_data.json'))
 
 
 app = Flask(__name__)
-CORS(app, origins=["http://localhost:5100", "https://livefetch.venoms.app"])
+# Allow all origins for simplicity, tighten this in production if needed
+CORS(app)
 
 
 # --- API Endpoint ---
@@ -35,8 +45,8 @@ def get_live_data():
             data = json.load(f)
 
         if len(data) == 0:
-            error_msg = {"error": "No live match currently ongoing."}
-            return jsonify(error_msg)
+            # Return empty list instead of error
+            return jsonify([])
         return jsonify(data)
 
     except FileNotFoundError:
@@ -55,7 +65,8 @@ def get_live_data():
 if __name__ == "__main__":
     # For production, use a WSGI server like Gunicorn
     # Example: gunicorn -w 4 -b 0.0.0.0:5100 api_server:app
-    print(f"Starting Flask server on http://127.0.0.1:5100")
+    print(f"Starting Flask server on http://0.0.0.0:5100")
     print(f"Serving data from: {DATA_FILE}")
-    print("Endpoint available at: https://livefetch.venoms.app/api/livedata")
-    app.run(host='0.0.0.0', port=5100, debug=True)
+    print(f"CORS enabled for all origins.")
+    print("Endpoint available at: /api/livedata")
+    app.run(host='0.0.0.0', port=5100, debug=not DEPLOYED)
