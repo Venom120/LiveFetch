@@ -1,146 +1,101 @@
 [
     {
+        "last_updated": 1761899261.1217892,
+        "match_id": "34867872",
+        "teams": "Western Australia v South Australia",
         "result": "In Progress",
-        "odds": [
-            {
-                "team_name": "Australia W",
-                "back": [
-                    {
-                        "price": "7.2",
-                        "size": "4.6K"
-                    },
-                    {
-                        "price": "7.4",
-                        "size": "174.5"
-                    },
-                    {
-                        "price": "7.6",
-                        "size": "173.6"
-                    }
-                ],
-                "lay": [
-                    {
-                        "price": "7.8",
-                        "size": "1.4K"
-                    },
-                    {
-                        "price": "8.2",
-                        "size": "6.5K"
-                    },
-                    {
-                        "price": "8.4",
-                        "size": "161.6"
-                    }
-                ]
-            },
-            {
-                "team_name": "India W",
-                "back": [
-                    {
-                        "price": "1.13",
-                        "size": "161.4K"
-                    },
-                    {
-                        "price": "1.14",
-                        "size": "45.1K"
-                    },
-                    {
-                        "price": "1.15",
-                        "size": "9.7K"
-                    }
-                ],
-                "lay": [
-                    {
-                        "price": "1.16",
-                        "size": "31.0K"
-                    },
-                    {
-                        "price": "1.17",
-                        "size": "8.9K"
-                    },
-                    {
-                        "price": "1.19",
-                        "size": "650.7"
-                    }
-                ]
-            }
-        ],
+        "odds": [],
         "bookmarker": [
             {
-                "team_name": "Australia W",
+                "team_name": "Western Australia",
                 "back": [],
-                "lay": [
-                    {
-                        "price": "625",
-                        "size": "3.8L"
-                    }
-                ]
+                "lay": []
             },
             {
-                "team_name": "India W",
-                "back": [
-                    {
-                        "price": "14",
-                        "size": "15L"
-                    },
-                    {
-                        "price": "15",
-                        "size": "15L"
-                    },
-                    {
-                        "price": "16",
-                        "size": "15L"
-                    }
-                ],
-                "lay": [
-                    {
-                        "price": "19",
-                        "size": "15L"
-                    },
-                    {
-                        "price": "20",
-                        "size": "15L"
-                    },
-                    {
-                        "price": "21",
-                        "size": "15L"
-                    }
-                ]
+                "team_name": "South Australia",
+                "back": [],
+                "lay": []
+            },
+            {
+                "team_name": "The Draw",
+                "back": [],
+                "lay": []
             }
         ],
         "fancy": [],
-        "sessions": [
+        "sessions": []
+    },
+    {
+        "last_updated": 1761899261.1217992,
+        "match_id": "34886843",
+        "teams": "Australia v India",
+        "result": "In Progress",
+        "odds": [
             {
-                "name": "50 Over INDW 1",
-                "no_val": "331",
-                "no_size": "100",
-                "yes_val": "333",
-                "yes_size": "100"
+                "team_name": "Australia",
+                "back": [
+                    {
+                        "price": "1.77",
+                        "size": "15878.63"
+                    },
+                    {
+                        "price": "1.76",
+                        "size": "22925.09"
+                    },
+                    {
+                        "price": "1.75",
+                        "size": "2421.94"
+                    }
+                ],
+                "lay": [
+                    {
+                        "price": "1.78",
+                        "size": "6504.34"
+                    },
+                    {
+                        "price": "1.79",
+                        "size": "1827.5"
+                    },
+                    {
+                        "price": "1.8",
+                        "size": "6235.25"
+                    }
+                ]
             },
             {
-                "name": "50 Over INDW",
-                "no_val": "",
-                "no_size": "00",
-                "yes_val": "",
-                "yes_size": "00"
-            },
-            {
-                "name": "47 Over INDW",
-                "no_val": "317",
-                "no_size": "100",
-                "yes_val": "318",
-                "yes_size": "100"
-            },
-            {
-                "name": "47.3 Over INDW",
-                "no_val": "321",
-                "no_size": "100",
-                "yes_val": "322",
-                "yes_size": "100"
+                "team_name": "India",
+                "back": [
+                    {
+                        "price": "2.28",
+                        "size": "5796.44"
+                    },
+                    {
+                        "price": "2.26",
+                        "size": "932.04"
+                    },
+                    {
+                        "price": "2.24",
+                        "size": "5355.37"
+                    }
+                ],
+                "lay": [
+                    {
+                        "price": "2.3",
+                        "size": "12219.64"
+                    },
+                    {
+                        "price": "2.32",
+                        "size": "17608.72"
+                    },
+                    {
+                        "price": "2.34",
+                        "size": "2480.45"
+                    }
+                ]
             }
         ],
-        "last_updated": 1761843945.874718,
-        "match_id": "34886842",
-        "teams": "Australia W v India W"
+        "bookmarker": [],
+        "fancy": [],
+        "sessions": []
     }
 ]
