@@ -49,6 +49,7 @@ BASE_URL = config.get('Scraper', {}).get('TARGET_URL', 'https://www.radheexch.xy
 AUTH_URL = config.get('Api', {}).get('AUTH_URL', 'https://api.radheexch.xyz/sso/auth/demo')
 MARKET_URL = config.get('Api', {}).get('MARKET_URL', 'https://api.radheexch.xyz/marketprovider/markets/eventtype/4')
 API_OP_KEY = config.get('Api', {}).get('OP_KEY', 'RDE')
+AUTH_TOKEN = None
 
 # --- Path Config ---
 if DEPLOYED:
@@ -511,18 +512,18 @@ def main_manager():
     """
     logging.info("Starting main manager loop.")
     
+    AUTH_TOKEN = get_auth_token()
     while not main_shutdown_event.is_set():
         try:
             logging.info("="*30)
             logging.info("Starting new manager cycle. Getting auth token...")
-            token = get_auth_token()
-            if not token:
+            if not AUTH_TOKEN:
                 logging.error("Failed to get auth token. Retrying in 60s.")
                 main_shutdown_event.wait(timeout=60)
                 continue
             
             logging.info("Got auth token. Fetching market data...")
-            market_list = get_market_data(token)
+            market_list = get_market_data(AUTH_TOKEN)
             if not market_list:
                 logging.error("Failed to get market data. Retrying in 10s.")
                 main_shutdown_event.wait(timeout=10)
